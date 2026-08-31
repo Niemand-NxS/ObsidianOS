@@ -5,6 +5,9 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    // '/ObsidianOS/' when built for GitHub Pages (project page under Niemand-NxS.github.io/ObsidianOS/),
+    // '/' for local dev and any other deploy target.
+    base: process.env.GITHUB_PAGES === 'true' ? '/ObsidianOS/' : '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
