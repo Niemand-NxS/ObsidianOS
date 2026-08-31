@@ -1,0 +1,10 @@
+{
+  "projectId": "obsidianos-server",
+  "appId": "1:690111598287:web:0596f57766c10ba811b1ba",
+  "apiKey": "AIzaSyAVA2T1TlPGberoDxK2fKTjmaG1uO6arQQ",
+  "authDomain": "obsidianos-server.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "obsidianos-server.firebasestorage.app",
+  "messagingSenderId": "690111598287",
+  "measurementId": "G-V4003PKDSC"
+}

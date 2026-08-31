@@ -1,0 +1,89 @@
+{
+  "entities": {
+    "UserData": {
+      "title": "UserData",
+      "description": "Comprehensive user state including files, settings, installed apps, and preferences",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "settings": { "type": "object", "description": "User personalization and system settings" },
+        "files": { "type": "array", "description": "Virtual filesystem items" },
+        "iconPositions": { "type": "object", "description": "Desktop icon coordinates" },
+        "installedAppIds": { "type": "array", "description": "List of installed app identifiers" },
+        "customApps": { "type": "array", "description": "User-imported or generated custom AI apps" },
+        "gameScores": { "type": "object", "description": "High scores for games" },
+        "recentApps": { "type": "array", "description": "Recently opened applications" },
+        "updatedAt": { "type": "number" },
+        "lastSync": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["userId", "updatedAt"]
+    },
+    "SyncVault": {
+      "title": "SyncVault",
+      "description": "AES-256 encrypted zero-knowledge user backup snapshot",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "encryptedPayload": { "type": "string", "maxLength": 10000000 },
+        "iv": { "type": "string", "maxLength": 128 },
+        "salt": { "type": "string", "maxLength": 128 },
+        "checksum": { "type": "string", "maxLength": 128 },
+        "version": { "type": "number" },
+        "timestamp": { "type": "number" },
+        "clientInfo": { "type": "string", "maxLength": 256 }
+      },
+      "required": ["userId", "encryptedPayload", "timestamp"]
+    },
+    "GameScore": {
+      "title": "GameScore",
+      "description": "Individual game highscore record for global leaderboard",
+      "type": "object",
+      "properties": {
+        "gameId": { "type": "string", "maxLength": 64 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userName": { "type": "string", "maxLength": 64 },
+        "score": { "type": "number" },
+        "level": { "type": "number" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["gameId", "userId", "score", "timestamp"]
+    },
+    "StoreApp": {
+      "title": "StoreApp",
+      "description": "Cloud app store entry or community application",
+      "type": "object",
+      "properties": {
+        "appId": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 64 },
+        "rating": { "type": "number" },
+        "size": { "type": "string", "maxLength": 32 },
+        "iconName": { "type": "string", "maxLength": 64 },
+        "description": { "type": "string", "maxLength": 512 },
+        "features": { "type": "array" },
+        "version": { "type": "string", "maxLength": 32 },
+        "code": { "type": "string", "maxLength": 500000 },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["appId", "name", "category"]
+    }
+  },
+  "firestore": {
+    "/obsidian_users_data/{userId}": {
+      "schema": "UserData",
+      "description": "Stores user system state, desktop configs, files, settings, and installed apps"
+    },
+    "/obsidian_sync_vaults/{userId}": {
+      "schema": "SyncVault",
+      "description": "Stores encrypted cloud vault backups"
+    },
+    "/obsidian_game_scores/{scoreId}": {
+      "schema": "GameScore",
+      "description": "Stores arcade game high scores and leaderboards"
+    },
+    "/obsidian_app_store/{appId}": {
+      "schema": "StoreApp",
+      "description": "Stores cloud and community apps catalog"
+    }
+  }
+}
