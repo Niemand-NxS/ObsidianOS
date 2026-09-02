@@ -32,11 +32,15 @@ import {
   Scan,
   Radio,
   Share2,
+  Upload,
+  FileArchive,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { sounds } from '../../services/soundService';
 import { AccentColorId, WallpaperId, ClockFont, UserProfile } from '../../types';
 import { FirebaseService } from '../../services/firebaseService';
+import { OpticIDScanner } from './OpticIDScanner';
+import { LicenseAgreementModal } from './LicenseAgreementModal';
 
 interface SetupAssistantProps {
   onComplete?: () => void;
@@ -72,6 +76,7 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
     users,
     accentConfig,
     settings,
+    restoreFullBackup,
   } = useOS();
 
   const [currentStep, setCurrentStep] = useState<SetupStep>(1);
@@ -148,6 +153,54 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
   // -------------------------------------------------------------
   type MigrationMode = 'cloud_account' | 'time_machine' | 'none';
   const [migrationMode, setMigrationMode] = useState<MigrationMode>('none');
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const [backupFile, setBackupFile] = useState<File | null>(null);
+  const [backupData, setBackupData] = useState<any | null>(null);
+  const [backupError, setBackupError] = useState<string | null>(null);
+  const [isRestoringBackup, setIsRestoringBackup] = useState(false);
+  const [restoreSuccess, setRestoreSuccess] = useState(false);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
+
+  const handleBackupFileUpload = async (file: File) => {
+    try {
+      setBackupError(null);
+      setBackupFile(file);
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('Die Datei enthält kein gültiges JSON-Format.');
+      }
+      setBackupData(parsed);
+      sounds.playSuccess();
+    } catch (err: any) {
+      setBackupError('Fehler beim Lesen der Backup-Datei: ' + (err?.message || 'Ungültiges Format'));
+      sounds.playError();
+    }
+  };
+
+  const handleExecuteRestore = async () => {
+    if (!backupData) return;
+    setIsRestoringBackup(true);
+    sounds.playOpen();
+    try {
+      const ok = await restoreFullBackup(backupData);
+      if (ok) {
+        setRestoreSuccess(true);
+        sounds.playSyncSuccess();
+        setTimeout(() => {
+          if (onComplete) onComplete();
+        }, 1200);
+      } else {
+        setBackupError('Wiederherstellung fehlgeschlagen. Bitte prüfe die Sicherungsdatei.');
+        sounds.playError();
+      }
+    } catch (e: any) {
+      setBackupError('Fehler: ' + (e?.message || 'Unbekannter Fehler'));
+      sounds.playError();
+    } finally {
+      setIsRestoringBackup(false);
+    }
+  };
 
   // -------------------------------------------------------------
   // STEP 5: Konto & Authentifizierung
@@ -160,6 +213,7 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
   const [passwordHint, setPasswordHint] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(true);
+  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(AVATAR_PRESETS[0].url);
   const [formError, setFormError] = useState('');
 
@@ -399,48 +453,18 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
         transition={{ type: 'spring', stiffness: 320, damping: 30 }}
         className="relative w-full max-w-[840px] h-[590px] rounded-[38px] sm:rounded-[44px] bg-[#141520]/75 border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden backdrop-blur-3xl text-zinc-100"
       >
-        {/* Top Header & Progress */}
-        <div className="px-7 pt-5 pb-2.5 flex flex-col gap-2 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div
-                className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[11px] shadow-sm"
-                style={{ backgroundColor: accentConfig.primary }}
-              >
-                <Sparkles className="w-3 h-3" />
-              </div>
-              <span className="text-xs font-bold text-zinc-300 tracking-wide uppercase">
-                ObsidianOS Assistent
-              </span>
+        {/* Top Header (Clean minimalist header without top progress bar) */}
+        <div className="px-7 pt-5 pb-1 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <div
+              className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[11px] shadow-sm"
+              style={{ backgroundColor: accentConfig.primary }}
+            >
+              <Sparkles className="w-3 h-3" />
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-mono">
-              <span>Schritt {currentStep} von 8</span>
-            </div>
-          </div>
-
-          {/* 8-Segment Minimalist Progress Bar */}
-          <div className="grid grid-cols-8 gap-1.5 w-full">
-            {([1, 2, 3, 4, 5, 6, 7, 8] as SetupStep[]).map((stepNum) => {
-              const isPast = stepNum < currentStep;
-              const isCurrent = stepNum === currentStep;
-              return (
-                <div
-                  key={stepNum}
-                  className="h-1 rounded-full overflow-hidden bg-white/10 transition-all duration-300"
-                >
-                  <div
-                    className={`h-full transition-all duration-300 ${
-                      isPast
-                        ? 'bg-purple-500'
-                        : isCurrent
-                        ? 'bg-white'
-                        : 'bg-transparent'
-                    }`}
-                    style={isPast ? { backgroundColor: accentConfig.primary } : undefined}
-                  />
-                </div>
-              );
-            })}
+            <span className="text-xs font-bold text-zinc-300 tracking-wide uppercase">
+              ObsidianOS Assistent
+            </span>
           </div>
         </div>
 
@@ -874,6 +898,137 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                   </button>
                 </div>
               )}
+
+              {migrationMode === 'time_machine' && (
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDraggingFile(true);
+                  }}
+                  onDragLeave={() => setIsDraggingFile(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDraggingFile(false);
+                    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                      handleBackupFileUpload(e.dataTransfer.files[0]);
+                    }
+                  }}
+                  className={`p-3.5 rounded-2xl border transition-all ${
+                    isDraggingFile
+                      ? 'bg-blue-600/30 border-blue-400 scale-[1.01]'
+                      : 'bg-white/[0.03] border-white/10'
+                  }`}
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json,.obsidianbackup,.obsidianvault"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleBackupFileUpload(e.target.files[0]);
+                      }
+                    }}
+                  />
+
+                  {backupError && (
+                    <div className="mb-2 p-2 rounded-xl bg-red-500/20 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{backupError}</span>
+                    </div>
+                  )}
+
+                  {restoreSuccess ? (
+                    <div className="p-3 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-xs flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span>System erfolgreich wiederhergestellt! Startet...</span>
+                      </div>
+                      <RefreshCw className="w-4 h-4 animate-spin text-emerald-400" />
+                    </div>
+                  ) : backupData ? (
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-blue-600/30 border border-blue-400/40 flex items-center justify-center text-blue-300 shrink-0">
+                          <FileArchive className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold text-white truncate">
+                            {backupFile?.name || 'Sicherungsdatei geladen'}
+                          </p>
+                          <p className="text-[10px] text-zinc-400 font-mono">
+                            {backupData.version ? `Version: ${backupData.version} • ` : ''}
+                            {backupData.timestamp
+                              ? new Date(backupData.timestamp).toLocaleDateString()
+                              : 'Gültiges Backup'}{' '}
+                            ({Math.round((backupFile?.size || 1024) / 1024)} KB)
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBackupData(null);
+                            setBackupFile(null);
+                            if (fileInputRef.current) fileInputRef.current.value = '';
+                          }}
+                          className="px-2.5 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-300 text-xs"
+                        >
+                          Andere Datei
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isRestoringBackup}
+                          onClick={handleExecuteRestore}
+                          className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow-md flex items-center gap-1.5 disabled:opacity-50"
+                        >
+                          {isRestoringBackup ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              <span>Wiederherstellen...</span>
+                            </>
+                          ) : (
+                            <>
+                              <HardDrive className="w-3.5 h-3.5" />
+                              <span>Jetzt wiederherstellen</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400">
+                          <Upload className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-zinc-200">
+                            Time-Machine-Sicherungsdatei (.json oder .obsidianbackup)
+                          </p>
+                          <p className="text-[10px] text-zinc-400">
+                            Hierhin ziehen oder per Klick aus dem Dateisystem auswählen
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sounds.playClick();
+                          fileInputRef.current?.click();
+                        }}
+                        className="px-3.5 py-1.5 rounded-xl bg-blue-600/80 hover:bg-blue-600 text-white font-medium text-xs shadow transition-all flex items-center gap-1.5"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>Datei auswählen</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -998,20 +1153,47 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                     </div>
                   </div>
 
-                  {/* Terms Checkbox */}
-                  <label className="p-2 rounded-xl bg-black/30 border border-white/5 flex items-start gap-2.5 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={termsAccepted}
-                      onChange={(e) => setTermsAccepted(e.target.checked)}
-                      className="mt-0.5 rounded border-zinc-700 text-purple-600 focus:ring-purple-500"
-                    />
-                    <span className="text-[10px] text-zinc-400 leading-snug">
-                      Ich akzeptiere die{' '}
-                      <span className="text-purple-300 font-medium">ObsidianOS Lizenzvereinbarung</span> und die
-                      Datenschutz- und Cloud-Bedingungen.
-                    </span>
-                  </label>
+                  {/* Terms Checkbox & Modal Trigger */}
+                  <div className="p-2 rounded-xl bg-black/30 border border-white/5 flex flex-col gap-1.5">
+                    <label className="flex items-start gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(e) => setTermsAccepted(e.target.checked)}
+                        className="mt-0.5 rounded border-zinc-700 text-purple-600 focus:ring-purple-500"
+                      />
+                      <span className="text-[10px] text-zinc-400 leading-snug">
+                        Ich akzeptiere die{' '}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            sounds.playClick();
+                            setIsLicenseModalOpen(true);
+                          }}
+                          className="text-purple-300 font-semibold underline hover:text-purple-200"
+                        >
+                          ObsidianOS Lizenzvereinbarung (EULA)
+                        </button>{' '}
+                        und die Datenschutz- und Cloud-Bedingungen.
+                      </span>
+                    </label>
+
+                    <div className="flex justify-end pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sounds.playClick();
+                          setIsLicenseModalOpen(true);
+                        }}
+                        className="px-2 py-0.5 rounded-lg bg-white/10 hover:bg-white/15 text-zinc-300 text-[10px] font-medium flex items-center gap-1.5 transition-colors"
+                      >
+                        <FileText className="w-3 h-3 text-purple-400" />
+                        <span>Lizenzvereinbarung ansehen</span>
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1019,94 +1201,33 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
 
           {/* Step 6: Sicherheit & Verschlüsselung (Optic ID) */}
           {currentStep === 6 && (
-            <div className="flex-1 flex flex-col items-center justify-center gap-4 overflow-hidden">
-              {/* Biometric Eye HUD Ring */}
-              <div className="relative w-32 h-32 flex items-center justify-center">
-                {/* Outer Glow Ring */}
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ repeat: Infinity, duration: 8, ease: 'linear' }}
-                  className="absolute inset-0 rounded-full border-2 border-dashed border-purple-500/40"
-                />
-                {/* Pulse Ring */}
-                <div
-                  className={`absolute inset-2 rounded-full border border-purple-500/60 transition-all ${
-                    opticIdStatus === 'scanning' ? 'animate-ping opacity-30' : 'opacity-20'
-                  }`}
-                />
-                {/* Core Eye / Sensor Container */}
-                <div
-                  className="w-24 h-24 rounded-full bg-purple-950/40 border border-purple-400/50 flex flex-col items-center justify-center relative overflow-hidden shadow-[0_0_30px_rgba(168,85,247,0.35)]"
-                >
-                  {opticIdStatus === 'completed' ? (
-                    <CheckCircle2 className="w-10 h-10 text-emerald-400 drop-shadow" />
-                  ) : (
-                    <Eye className="w-10 h-10 text-purple-300" />
-                  )}
+            <div className="flex-1 flex flex-col items-center justify-center gap-3 overflow-hidden">
+              <OpticIDScanner
+                accentColor={accentConfig.primary}
+                isScanning={opticIdStatus === 'scanning'}
+                status={opticIdStatus}
+                onStartScan={() => {
+                  setOpticIdStatus('scanning');
+                }}
+                onScanComplete={() => {
+                  setOpticIdStatus('completed');
+                }}
+              />
 
-                  {/* Scanning Laser Line */}
-                  {opticIdStatus === 'scanning' && (
-                    <motion.div
-                      animate={{ y: [-30, 30, -30] }}
-                      transition={{ repeat: Infinity, duration: 1.4, ease: 'easeInOut' }}
-                      className="absolute inset-x-0 h-0.5 bg-cyan-400 shadow-[0_0_8px_#22d3ee]"
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Status Message & Action */}
-              <div className="text-center space-y-1.5 max-w-md">
-                {opticIdStatus === 'completed' ? (
-                  <>
-                    <h3 className="text-sm font-bold text-emerald-400">Optic ID erfolgreich registriert!</h3>
-                    <p className="text-xs text-zinc-400">
-                      Dein biometrisches Augenmuster wurde sicher in der verschlüsselten Enklave gespeichert.
-                    </p>
-                  </>
-                ) : opticIdStatus === 'scanning' ? (
-                  <>
-                    <h3 className="text-sm font-bold text-white">Scanne Netzhaut & Iris... ({scanProgress}%)</h3>
-                    <p className="text-xs text-purple-300">
-                      Halte den Blick auf den Sensor gerichtet.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h3 className="text-sm font-bold text-white">Optic ID für Login & Sicherheit</h3>
-                    <p className="text-xs text-zinc-400">
-                      Erfasse deinen Augenscan, um dich nahtlos bei ObsidianOS anzumelden und Passwörter zu bestätigen.
-                    </p>
-                  </>
-                )}
-              </div>
-
-              {/* Buttons */}
-              <div className="flex gap-3 pt-1">
+              {/* Status and Action Buttons */}
+              <div className="flex items-center gap-3 pt-1">
                 {opticIdStatus !== 'completed' ? (
-                  <>
-                    <button
-                      type="button"
-                      disabled={opticIdStatus === 'scanning'}
-                      onClick={handleStartOpticScan}
-                      className="px-5 py-2 rounded-xl text-xs font-semibold text-white shadow-lg transition-all hover:scale-[1.02] flex items-center gap-2 disabled:opacity-50"
-                      style={{ backgroundColor: accentConfig.primary }}
-                    >
-                      <Scan className="w-3.5 h-3.5" />
-                      <span>{opticIdStatus === 'scanning' ? 'Erfasse Scan...' : 'Optic ID jetzt erfassen'}</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        sounds.playClick();
-                        setOpticIdStatus('skipped');
-                        setCurrentStep(7);
-                      }}
-                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-zinc-300 transition-colors"
-                    >
-                      Später einrichten
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sounds.playClick();
+                      setOpticIdStatus('skipped');
+                      setCurrentStep(7);
+                    }}
+                    className="px-4 py-1.5 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-zinc-300 transition-colors"
+                  >
+                    Später in Systemeinstellungen einrichten
+                  </button>
                 ) : (
                   <button
                     type="button"
@@ -1116,7 +1237,7 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                     }}
                     className="px-6 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md transition-all flex items-center gap-2"
                   >
-                    <span>Weiter zur Hintergrundkonfiguration</span>
+                    <span>Weiter zur Konfiguration</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -1514,6 +1635,18 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* License Agreement (EULA) Modal */}
+      <LicenseAgreementModal
+        isOpen={isLicenseModalOpen}
+        onClose={() => setIsLicenseModalOpen(false)}
+        onAccept={() => {
+          setTermsAccepted(true);
+          setIsLicenseModalOpen(false);
+          sounds.playSuccess();
+        }}
+        accentColor={accentConfig.primary}
+      />
     </div>
   );
 };

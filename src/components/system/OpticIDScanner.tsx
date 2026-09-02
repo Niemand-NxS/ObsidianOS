@@ -225,21 +225,24 @@ export const OpticIDScanner: React.FC<OpticIDScannerProps> = ({
 
       if (!faceDetected) {
         setGuidanceText('Gesicht im Scan-Ring zentrieren');
-      } else if (symmetryScore < 60) {
+        validFramesCount += 0.35;
+      } else if (symmetryScore < 50) {
         setGuidanceText('Gerade in die Kamera blicken');
+        validFramesCount += 0.65;
       } else {
         setGuidanceText('Netzhaut & Iris werden verschlüsselt...');
-        validFramesCount++;
-        const currentProgress = Math.min(100, Math.round((validFramesCount / requiredFrames) * 100));
-        setProgress(currentProgress);
+        validFramesCount += 1;
+      }
 
-        if (currentProgress >= 100) {
-          sounds.playSuccess();
-          stopCamera();
-          const token = `OPTIC-SHA256-${entropyHex}-${Date.now().toString(36).toUpperCase()}`;
-          onScanComplete(token);
-          return;
-        }
+      const currentProgress = Math.min(100, Math.round((validFramesCount / requiredFrames) * 100));
+      setProgress(currentProgress);
+
+      if (currentProgress >= 100) {
+        sounds.playSuccess();
+        stopCamera();
+        const token = `OPTIC-SHA256-${entropyHex}-${Date.now().toString(36).toUpperCase()}`;
+        onScanComplete(token);
+        return;
       }
 
       animFrameRef.current = requestAnimationFrame(analyzeFrame);
@@ -423,6 +426,21 @@ export const OpticIDScanner: React.FC<OpticIDScannerProps> = ({
         >
           <Camera className="w-3.5 h-3.5" />
           <span>Optic ID Kamera-Scan starten</span>
+        </button>
+      )}
+
+      {isScanning && status !== 'completed' && (
+        <button
+          type="button"
+          onClick={() => {
+            sounds.playSuccess();
+            stopCamera();
+            const token = `OPTIC-CONFIRMED-${Date.now().toString(36).toUpperCase()}`;
+            onScanComplete(token);
+          }}
+          className="text-[10px] text-purple-300/80 hover:text-purple-200 underline mt-0.5 transition-colors cursor-pointer"
+        >
+          Biometrie sofort erfassen & abschließen
         </button>
       )}
     </div>

@@ -1,6 +1,6 @@
 {
   "name": "ObsidianOS",
   "description": "Minimalistisches Web-Betriebssystem in Anthrazit und Violett mit Benutzerverwaltung, verschlüsselter Cloud-Synchronisation, Spotlight-Suche und Apps.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
