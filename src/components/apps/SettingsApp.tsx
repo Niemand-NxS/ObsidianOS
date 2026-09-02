@@ -40,7 +40,9 @@ interface SettingsAppProps {
 }
 
 export const SettingsApp: React.FC<SettingsAppProps> = ({ initialTab }) => {
-  const { accentConfig, sounds } = useOS();
+  const { accentConfig, sounds, effectiveTheme, effectiveGlassContrast, isLight } = useOS();
+  const isLightMode = isLight || (effectiveTheme === 'glassy' && effectiveGlassContrast === 'dark');
+  const isGlassy = effectiveTheme === 'glassy';
 
   // Normalize initialTab
   const getNormalizedTab = (tab?: string): SettingsTab => {
@@ -100,12 +102,37 @@ export const SettingsApp: React.FC<SettingsAppProps> = ({ initialTab }) => {
   ];
 
   return (
-    <div id="settings-app" className="flex h-full bg-[#09090e] text-zinc-100 select-none overflow-hidden font-sans">
+    <div
+      id="settings-app"
+      className={`flex h-full select-none overflow-hidden font-sans transition-colors ${
+        effectiveTheme === 'light'
+          ? 'bg-slate-50 text-zinc-900'
+          : isGlassy
+          ? isLightMode
+            ? 'bg-transparent text-zinc-900'
+            : 'bg-transparent text-zinc-100'
+          : 'bg-[#09090e] text-zinc-100'
+      }`}
+    >
       {/* 1. Modern Sidebar Navigation */}
-      <div className="w-56 sm:w-64 border-r border-white/[0.08] bg-[#0d0d13]/95 flex flex-col justify-between p-3 shrink-0 overflow-y-auto custom-scrollbar">
+      <div
+        className={`w-56 sm:w-64 border-r flex flex-col justify-between p-3 shrink-0 overflow-y-auto custom-scrollbar transition-colors ${
+          effectiveTheme === 'light'
+            ? 'bg-slate-100/90 border-slate-200 text-zinc-900'
+            : isGlassy
+            ? isLightMode
+              ? 'bg-white/40 border-black/10 backdrop-blur-xl text-zinc-900'
+              : 'bg-white/[0.06] border-white/10 backdrop-blur-xl text-zinc-100'
+            : 'bg-[#0d0d13]/95 border-white/[0.08] text-zinc-100'
+        }`}
+      >
         <div className="space-y-4">
           <div className="px-2 pt-1 pb-0.5">
-            <h2 className="text-[11px] font-bold tracking-wider uppercase text-zinc-400 font-mono">
+            <h2
+              className={`text-[11px] font-bold tracking-wider uppercase font-mono ${
+                isLightMode ? 'text-zinc-500' : 'text-zinc-400'
+              }`}
+            >
               Systemsteuerung
             </h2>
           </div>
@@ -113,7 +140,11 @@ export const SettingsApp: React.FC<SettingsAppProps> = ({ initialTab }) => {
           {navGroups.map((group, gIdx) => (
             <div key={gIdx} className="space-y-1">
               <div className="px-2.5 py-0.5">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 font-mono">
+                <span
+                  className={`text-[10px] font-bold uppercase tracking-wider font-mono ${
+                    isLightMode ? 'text-zinc-400' : 'text-zinc-500'
+                  }`}
+                >
                   {group.groupTitle}
                 </span>
               </div>
@@ -131,7 +162,11 @@ export const SettingsApp: React.FC<SettingsAppProps> = ({ initialTab }) => {
                     }}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all ${
                       isActive
-                        ? 'bg-white/[0.1] text-white border border-white/20 shadow-sm'
+                        ? isLightMode
+                          ? 'bg-purple-100 text-purple-900 border border-purple-300/80 shadow-sm font-semibold'
+                          : 'bg-white/[0.12] text-white border border-white/20 shadow-sm'
+                        : isLightMode
+                        ? 'text-zinc-600 hover:bg-black/[0.05] hover:text-zinc-900'
                         : 'text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200'
                     }`}
                   >
@@ -148,14 +183,30 @@ export const SettingsApp: React.FC<SettingsAppProps> = ({ initialTab }) => {
         </div>
 
         {/* Footer info badge */}
-        <div className="p-2.5 rounded-xl bg-black/40 border border-white/[0.04] text-[10px] text-zinc-500 flex items-center justify-between">
+        <div
+          className={`p-2.5 rounded-xl border text-[10px] flex items-center justify-between transition-colors ${
+            isLightMode
+              ? 'bg-slate-200/70 border-slate-300/80 text-zinc-600'
+              : 'bg-black/40 border-white/[0.04] text-zinc-500'
+          }`}
+        >
           <span>ObsidianOS v3.4</span>
           <span className="w-2 h-2 rounded-full bg-emerald-500" />
         </div>
       </div>
 
       {/* 2. Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 bg-[#09090e]/90 custom-scrollbar">
+      <div
+        className={`flex-1 overflow-y-auto p-6 custom-scrollbar transition-colors ${
+          effectiveTheme === 'light'
+            ? 'bg-white/80'
+            : isGlassy
+            ? isLightMode
+              ? 'bg-white/20'
+              : 'bg-black/10'
+            : 'bg-[#09090e]/90'
+        }`}
+      >
         <div className="max-w-3xl mx-auto pb-8">
           {activeTab === 'appearance' && <AppearanceTab />}
           {activeTab === 'wallpaper' && <WallpaperTab />}

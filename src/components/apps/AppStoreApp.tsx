@@ -254,7 +254,11 @@ export const AppStoreApp: React.FC = () => {
     removeCustomApp,
     openApp,
     currentUser,
+    isLight,
+    effectiveGlassContrast,
   } = useOS();
+
+  const isLightMode = isLight || effectiveGlassContrast === 'dark';
 
   const [activeTab, setActiveTab] = useState<'apps' | 'ai-generator' | 'my-apps' | 'wallpapers'>('apps');
   const [searchQuery, setSearchQuery] = useState('');
@@ -617,9 +621,18 @@ Erstelle nun das vollständige JSON:`;
   });
 
   return (
-    <div id="app-store-window" className="flex flex-col h-full w-full bg-[#0a0a0f] text-[#f4f4f5] select-none font-sans overflow-hidden">
+    <div
+      id="app-store-window"
+      className={`flex flex-col h-full w-full select-none font-sans overflow-hidden transition-colors ${
+        isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0a0f] text-[#f4f4f5]'
+      }`}
+    >
       {/* Top Store Navigation Bar */}
-      <div className="flex items-center justify-between px-6 py-3.5 bg-[#12121a] border-b border-[#27272a]/70 shrink-0 flex-wrap gap-2">
+      <div
+        className={`flex items-center justify-between px-6 py-3.5 border-b shrink-0 flex-wrap gap-2 transition-colors ${
+          isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-[#12121a] border-[#27272a]/70'
+        }`}
+      >
         <div className="flex items-center gap-3">
           <div
             className="w-8 h-8 rounded-xl flex items-center justify-center text-white shadow-lg shrink-0"
@@ -629,22 +642,36 @@ Erstelle nun das vollständige JSON:`;
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-sm font-bold text-white tracking-wide">Obsidian App Store</h1>
-              <span className="flex items-center gap-1 text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              <h1 className={`text-sm font-bold tracking-wide ${isLightMode ? 'text-slate-900' : 'text-white'}`}>
+                Obsidian App Store
+              </h1>
+              <span className="flex items-center gap-1 text-[10px] text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 font-medium">
                 <Cloud className="w-3 h-3" />
                 <span>Firestore Cloud Sync</span>
               </span>
             </div>
-            <p className="text-[11px] text-zinc-400">Entdecken, Herunterladen & KI-Apps in Firestore speichern</p>
+            <p className={`text-[11px] ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>
+              Entdecken, Herunterladen & KI-Apps in Firestore speichern
+            </p>
           </div>
         </div>
 
         {/* Store Tabs */}
-        <div className="flex bg-[#181824] p-1 rounded-2xl border border-[#27272a] overflow-x-auto max-w-full">
+        <div
+          className={`flex p-1 rounded-2xl border overflow-x-auto max-w-full transition-colors ${
+            isLightMode ? 'bg-slate-200 border-slate-300' : 'bg-[#181824] border-[#27272a]'
+          }`}
+        >
           <button
             onClick={() => setActiveTab('apps')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
-              activeTab === 'apps' ? 'bg-[#252538] text-white shadow font-semibold' : 'text-zinc-400 hover:text-white'
+              activeTab === 'apps'
+                ? isLightMode
+                  ? 'bg-white text-slate-900 shadow-sm font-semibold'
+                  : 'bg-[#252538] text-white shadow font-semibold'
+                : isLightMode
+                ? 'text-slate-600 hover:text-slate-900'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
             Apps entdecken
@@ -653,28 +680,46 @@ Erstelle nun das vollständige JSON:`;
             onClick={() => setActiveTab('ai-generator')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
               activeTab === 'ai-generator'
-                ? 'bg-purple-600/90 text-white shadow font-semibold'
+                ? 'bg-purple-600 text-white shadow font-semibold'
+                : isLightMode
+                ? 'text-purple-700 hover:text-purple-900'
                 : 'text-zinc-400 hover:text-purple-300'
             }`}
           >
-            <Zap className="w-3.5 h-3.5 text-purple-300" />
+            <Zap className="w-3.5 h-3.5" />
             <span>KI-Prompt & Import</span>
           </button>
           <button
             onClick={() => setActiveTab('my-apps')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
-              activeTab === 'my-apps' ? 'bg-[#252538] text-white shadow font-semibold' : 'text-zinc-400 hover:text-white'
+              activeTab === 'my-apps'
+                ? isLightMode
+                  ? 'bg-white text-slate-900 shadow-sm font-semibold'
+                  : 'bg-[#252538] text-white shadow font-semibold'
+                : isLightMode
+                ? 'text-slate-600 hover:text-slate-900'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
             <span>Meine Apps</span>
-            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-purple-500/20 text-purple-300 font-mono">
+            <span
+              className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                isLightMode ? 'bg-purple-100 text-purple-700' : 'bg-purple-500/20 text-purple-300'
+              }`}
+            >
               {installedAppIds.length + customApps.length}
             </span>
           </button>
           <button
             onClick={() => setActiveTab('wallpapers')}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
-              activeTab === 'wallpapers' ? 'bg-[#252538] text-white shadow font-semibold' : 'text-zinc-400 hover:text-white'
+              activeTab === 'wallpapers'
+                ? isLightMode
+                  ? 'bg-white text-slate-900 shadow-sm font-semibold'
+                  : 'bg-[#252538] text-white shadow font-semibold'
+                : isLightMode
+                ? 'text-slate-600 hover:text-slate-900'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
             Wallpapers & Themes
@@ -683,459 +728,589 @@ Erstelle nun das vollständige JSON:`;
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-6 bg-[#0c0c12]">
-        {/* TAB 1: APPS ENTDECKEN */}
-        {activeTab === 'apps' && (
-          <div className="max-w-5xl mx-auto space-y-6">
-            {/* Search and Category Filters */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="relative w-full sm:w-80">
-                <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Apps durchsuchen..."
-                  className="w-full bg-[#14141e] border border-[#27272a] focus:border-purple-500 rounded-xl pl-10 pr-4 py-2 text-xs text-white placeholder-zinc-500 outline-none transition-all"
-                />
-              </div>
-
-              {/* Category Pills */}
-              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
-                {['Alle', 'Spiele', 'Produktivität', 'Dienstprogramme', 'Kreativität'].map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
-                      selectedCategory === cat
-                        ? 'bg-white/15 text-white border border-white/20'
-                        : 'bg-[#14141e] text-zinc-400 hover:text-white border border-[#27272a]'
+      <div className={`flex-1 overflow-y-auto p-6 transition-colors ${isLightMode ? 'bg-slate-50' : 'bg-[#0c0c12]'}`}>
+        <AnimatePresence mode="wait">
+          {/* TAB 1: APPS ENTDECKEN */}
+          {activeTab === 'apps' && (
+            <motion.div
+              key="tab-apps"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+              className="max-w-5xl mx-auto space-y-6"
+            >
+              {/* Search and Category Filters */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="relative w-full sm:w-80">
+                  <Search className={`w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 ${isLightMode ? 'text-slate-400' : 'text-zinc-400'}`} />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Apps durchsuchen..."
+                    className={`w-full border rounded-xl pl-10 pr-4 py-2 text-xs outline-none transition-all ${
+                      isLightMode
+                        ? 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-purple-500 shadow-sm'
+                        : 'bg-[#14141e] border-[#27272a] text-white placeholder-zinc-500 focus:border-purple-500'
                     }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
+                  />
+                </div>
+
+                {/* Category Pills */}
+                <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+                  {['Alle', 'Spiele', 'Produktivität', 'Dienstprogramme', 'Kreativität'].map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all whitespace-nowrap ${
+                        selectedCategory === cat
+                          ? isLightMode
+                            ? 'bg-slate-900 text-white shadow-sm'
+                            : 'bg-white/15 text-white border border-white/20'
+                          : isLightMode
+                          ? 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-300'
+                          : 'bg-[#14141e] text-zinc-400 hover:text-white border border-[#27272a]'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Apps Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredApps.map((app) => {
-                const isInstalled = installedAppIds.includes(app.id);
-                const progress = downloadingItems[app.id];
-                const isDownloading = typeof progress === 'number';
+              {/* Apps Grid with FLIP Morph */}
+              <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredApps.map((app) => {
+                  const isInstalled = installedAppIds.includes(app.id);
+                  const progress = downloadingItems[app.id];
+                  const isDownloading = typeof progress === 'number';
 
-                return (
-                  <div
-                    key={app.id}
-                    className="p-5 rounded-2xl bg-[#14141e]/90 border border-[#27272a] hover:border-zinc-700 transition-all flex flex-col justify-between shadow-lg group relative overflow-hidden"
-                  >
-                    <div>
-                      {/* App Header: Icon, Name & Rating */}
-                      <div className="flex items-start gap-3.5 mb-3">
-                        <div
-                          className="w-13 h-13 rounded-2xl bg-[#1c1c28] border border-white/10 flex items-center justify-center shadow-md shrink-0 group-hover:scale-105 transition-transform"
-                          style={{
-                            boxShadow: `0 8px 20px rgba(0,0,0,0.5)`,
-                            color: accentConfig.text,
-                          }}
-                        >
-                          {renderAppIcon(app.iconName, 'w-6 h-6')}
-                        </div>
+                  return (
+                    <motion.div
+                      layout
+                      layoutId={`app-store-card-${app.id}`}
+                      key={app.id}
+                      className={`p-5 rounded-2xl border transition-all flex flex-col justify-between shadow-md group relative overflow-hidden ${
+                        isLightMode
+                          ? 'bg-white border-slate-200 hover:border-slate-300 hover:shadow-lg'
+                          : 'bg-[#14141e]/90 border-[#27272a] hover:border-zinc-700 hover:shadow-xl'
+                      }`}
+                    >
+                      <div>
+                        {/* App Header: Icon, Name & Rating */}
+                        <div className="flex items-start gap-3.5 mb-3">
+                          <div
+                            className={`w-13 h-13 rounded-2xl border flex items-center justify-center shadow-md shrink-0 group-hover:scale-105 transition-transform ${
+                              isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-[#1c1c28] border-white/10'
+                            }`}
+                            style={{
+                              color: accentConfig.text,
+                            }}
+                          >
+                            {renderAppIcon(app.iconName, 'w-6 h-6')}
+                          </div>
 
-                        <div className="overflow-hidden flex-1">
-                          <h3 className="text-sm font-bold text-white truncate group-hover:text-purple-300 transition-colors">
-                            {app.name}
-                          </h3>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[11px] text-zinc-400">{app.category}</span>
-                            <span className="text-zinc-600">•</span>
-                            <div className="flex items-center gap-1 text-[11px] text-amber-400">
-                              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                              <span>{app.rating}</span>
+                          <div className="overflow-hidden flex-1">
+                            <h3
+                              className={`text-sm font-bold truncate transition-colors ${
+                                isLightMode ? 'text-slate-900 group-hover:text-purple-600' : 'text-white group-hover:text-purple-300'
+                              }`}
+                            >
+                              {app.name}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className={`text-[11px] ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>
+                                {app.category}
+                              </span>
+                              <span className={isLightMode ? 'text-slate-300' : 'text-zinc-600'}>•</span>
+                              <div className="flex items-center gap-1 text-[11px] text-amber-500">
+                                <Star className="w-3 h-3 fill-amber-400 text-amber-500" />
+                                <span>{app.rating}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
+
+                        {/* Description */}
+                        <p className={`text-xs line-clamp-2 mb-4 leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>
+                          {app.description}
+                        </p>
+
+                        {/* Features */}
+                        <div className="space-y-1 mb-4">
+                          {app.features.slice(0, 2).map((feat, idx) => (
+                            <div key={idx} className={`flex items-center gap-1.5 text-[11px] ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>
+                              <Check className="w-3 h-3 text-purple-500 shrink-0" />
+                              <span className="truncate">{feat}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
 
-                      {/* Description */}
-                      <p className="text-xs text-zinc-400 line-clamp-2 mb-4 leading-relaxed">
-                        {app.description}
-                      </p>
+                      {/* Footer: Size & Install Button */}
+                      <div className={`flex items-center justify-between pt-3 border-t mt-auto ${isLightMode ? 'border-slate-200' : 'border-zinc-800/80'}`}>
+                        <span className={`text-[11px] font-mono ${isLightMode ? 'text-slate-400' : 'text-zinc-500'}`}>{app.size}</span>
 
-                      {/* Features */}
-                      <div className="space-y-1 mb-4">
-                        {app.features.slice(0, 2).map((feat, idx) => (
-                          <div key={idx} className="flex items-center gap-1.5 text-[11px] text-zinc-400">
-                            <Check className="w-3 h-3 text-purple-400 shrink-0" />
-                            <span className="truncate">{feat}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Footer: Size & Install Button */}
-                    <div className="flex items-center justify-between pt-3 border-t border-zinc-800/80 mt-auto">
-                      <span className="text-[11px] text-zinc-500 font-mono">{app.size}</span>
-
-                      <div className="flex items-center gap-2">
-                        {isInstalled ? (
-                          <>
+                        <div className="flex items-center gap-2">
+                          {isInstalled ? (
+                            <>
+                              <button
+                                onClick={() => openApp(app.id)}
+                                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5 ${
+                                  isLightMode
+                                    ? 'bg-slate-200 hover:bg-slate-300 text-slate-900'
+                                    : 'bg-[#252538] hover:bg-[#32324a] text-white'
+                                }`}
+                              >
+                                <Play className="w-3 h-3 fill-current" />
+                                <span>Öffnen</span>
+                              </button>
+                              <button
+                                onClick={() => handleUninstall(app.id)}
+                                title="Deinstallieren"
+                                className="p-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs transition-all"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          ) : isDownloading ? (
+                            <div className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-purple-500/20 text-purple-600 text-xs font-semibold">
+                              <span className="w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                              <span>{progress}%</span>
+                            </div>
+                          ) : (
                             <button
-                              onClick={() => openApp(app.id)}
-                              className="px-3.5 py-1.5 rounded-xl bg-[#252538] hover:bg-[#32324a] text-white text-xs font-semibold transition-all flex items-center gap-1.5"
+                              onClick={() => handleDownloadApp(app)}
+                              className="px-4 py-1.5 rounded-xl text-white text-xs font-bold transition-all flex items-center gap-1.5 hover:brightness-110 shadow-md active:scale-95"
+                              style={{ backgroundColor: accentConfig.primary }}
                             >
-                              <Play className="w-3 h-3 fill-white" />
-                              <span>Öffnen</span>
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Laden</span>
                             </button>
-                            <button
-                              onClick={() => handleUninstall(app.id)}
-                              title="Deinstallieren"
-                              className="p-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs transition-all"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </>
-                        ) : isDownloading ? (
-                          <div className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-purple-600/30 text-purple-300 text-xs font-semibold">
-                            <span className="w-3 h-3 border-2 border-purple-400 border-t-transparent rounded-full animate-spin" />
-                            <span>{progress}%</span>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => handleDownloadApp(app)}
-                            className="px-4 py-1.5 rounded-xl text-white text-xs font-bold transition-all flex items-center gap-1.5 hover:brightness-110 shadow-lg active:scale-95"
-                            style={{ backgroundColor: accentConfig.primary }}
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            <span>Laden</span>
-                          </button>
-                        )}
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* TAB 2: KI-PROMPT GENERATOR & APP-IMPORT */}
+          {activeTab === 'ai-generator' && (
+            <motion.div
+              key="tab-ai-gen"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+              className="max-w-4xl mx-auto space-y-6"
+            >
+              {/* Header banner */}
+              <div
+                className={`p-6 rounded-3xl border shadow-lg ${
+                  isLightMode
+                    ? 'bg-purple-50 border-purple-200 text-slate-900'
+                    : 'bg-gradient-to-r from-purple-950/40 via-[#151522] to-indigo-950/40 border-purple-500/30 text-white'
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-9 h-9 rounded-2xl bg-purple-600 flex items-center justify-center text-white text-lg font-bold shadow-lg shrink-0">
+                    <Zap className="w-5 h-5 text-white" />
                   </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 2: KI-PROMPT GENERATOR & APP-IMPORT */}
-        {activeTab === 'ai-generator' && (
-          <div className="max-w-4xl mx-auto space-y-6">
-            {/* Header banner */}
-            <div className="p-6 rounded-3xl bg-gradient-to-r from-purple-950/40 via-[#151522] to-indigo-950/40 border border-purple-500/30 shadow-2xl">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-9 h-9 rounded-2xl bg-purple-600 flex items-center justify-center text-white text-lg font-bold shadow-lg shrink-0">
-                  <Zap className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-base font-bold text-white">KI App-Generator & Firestore Cloud Import</h2>
-                  <p className="text-xs text-zinc-400">
-                    Kopiere den Prompt für ChatGPT, Claude oder Gemini und lade die generierte JSON-Datei direkt in ObsidianOS hoch.
-                  </p>
+                  <div>
+                    <h2 className={`text-base font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>
+                      KI App-Generator & Firestore Cloud Import
+                    </h2>
+                    <p className={`text-xs ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>
+                      Kopiere den Prompt für ChatGPT, Claude oder Gemini und lade die generierte JSON-Datei direkt in ObsidianOS hoch.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Step 1: Preset & Prompt Kopieren */}
-            <div className="p-6 rounded-2xl bg-[#14141e] border border-[#27272a] space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-purple-600/30 text-purple-400 flex items-center justify-center text-xs font-bold">
-                    1
-                  </span>
-                  <h3 className="text-sm font-bold text-white">Prompt-Vorlage auswählen & kopieren</h3>
-                </div>
+              {/* Step 1: Preset & Prompt Kopieren */}
+              <div
+                className={`p-6 rounded-2xl border space-y-4 ${
+                  isLightMode ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#14141e] border-[#27272a]'
+                }`}
+              >
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-purple-600/20 text-purple-600 flex items-center justify-center text-xs font-bold">
+                      1
+                    </span>
+                    <h3 className={`text-sm font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>
+                      Prompt-Vorlage auswählen & kopieren
+                    </h3>
+                  </div>
 
-                <button
-                  onClick={handleCopyPrompt}
-                  className="px-4 py-2 rounded-xl text-white text-xs font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 hover:brightness-110"
-                  style={{ backgroundColor: accentConfig.primary }}
-                >
-                  {copiedPrompt ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
-                  <span>{copiedPrompt ? 'Prompt kopiert!' : 'Prompt in Zwischenablage kopieren'}</span>
-                </button>
-              </div>
-
-              {/* Preset buttons */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                {PROMPT_PRESETS.map((preset, idx) => (
                   <button
-                    key={idx}
-                    onClick={() => {
-                      setSelectedPresetIndex(idx);
-                      setCustomIdea('');
-                      sounds.playClick();
-                    }}
-                    className={`p-3 rounded-xl border text-left text-xs transition-all ${
-                      selectedPresetIndex === idx && !customIdea
-                        ? 'border-purple-500 bg-purple-500/10 text-white font-semibold'
-                        : 'border-[#27272a] bg-[#101017] text-zinc-400 hover:text-white hover:border-zinc-600'
-                    }`}
+                    onClick={handleCopyPrompt}
+                    className="px-4 py-2 rounded-xl text-white text-xs font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 hover:brightness-110"
+                    style={{ backgroundColor: accentConfig.primary }}
                   >
-                    <span className="block font-bold text-white mb-0.5">{preset.title}</span>
-                    <span className="text-[11px] text-zinc-400 line-clamp-1">{preset.appType}</span>
+                    {copiedPrompt ? <Check className="w-4 h-4 text-white" /> : <Copy className="w-4 h-4" />}
+                    <span>{copiedPrompt ? 'Prompt kopiert!' : 'Prompt in Zwischenablage kopieren'}</span>
                   </button>
-                ))}
-              </div>
-
-              {/* Custom app idea input */}
-              <div className="pt-2">
-                <label className="text-xs font-semibold text-zinc-300 block mb-1">
-                  Oder eigene App-Idee eingeben:
-                </label>
-                <input
-                  type="text"
-                  value={customIdea}
-                  onChange={(e) => setCustomIdea(e.target.value)}
-                  placeholder="z.B. ein interaktives Memory-Kartenspiel mit Timer und Bestenliste..."
-                  className="w-full bg-[#0a0a0f] border border-[#27272a] focus:border-purple-500 rounded-xl px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 outline-none"
-                />
-              </div>
-
-              {/* Prompt Preview Container */}
-              <div className="relative rounded-2xl bg-[#09090d] border border-[#27272a] p-4 text-[11px] font-mono text-zinc-300 overflow-x-auto max-h-48 whitespace-pre-wrap">
-                {promptTemplate}
-              </div>
-            </div>
-
-            {/* Step 2: Hochladen & Ausführen */}
-            <div className="p-6 rounded-2xl bg-[#14141e] border border-[#27272a] space-y-4">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-purple-600/30 text-purple-400 flex items-center justify-center text-xs font-bold">
-                    2
-                  </span>
-                  <h3 className="text-sm font-bold text-white">Generierte JSON-Datei hochladen & in Firestore speichern</h3>
                 </div>
 
-                <button
-                  onClick={handleTestDemoApp}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-semibold transition-all flex items-center gap-1.5"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Demo-App testen</span>
-                </button>
-              </div>
-
-              {/* Publish to Cloud Firestore Checkbox */}
-              <label className="flex items-center gap-2.5 p-3 rounded-xl bg-[#0d0d14] border border-[#27272a] cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={publishToCloud}
-                  onChange={(e) => setPublishToCloud(e.target.checked)}
-                  className="accent-purple-500 w-4 h-4 rounded"
-                />
-                <div>
-                  <span className="text-xs font-semibold text-white flex items-center gap-1.5">
-                    <Cloud className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>In Cloud-AppStore (Firestore) veröffentlichen</span>
-                  </span>
-                  <p className="text-[10px] text-zinc-400">
-                    Die App wird dauerhaft in der Firestore-Datenbank gespeichert und steht im Store zum Download bereit.
-                  </p>
+                {/* Preset buttons */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  {PROMPT_PRESETS.map((preset, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
+                        setSelectedPresetIndex(idx);
+                        setCustomIdea('');
+                        sounds.playClick();
+                      }}
+                      className={`p-3 rounded-xl border text-left text-xs transition-all ${
+                        selectedPresetIndex === idx && !customIdea
+                          ? isLightMode
+                            ? 'border-purple-500 bg-purple-50 text-purple-900 font-semibold shadow-sm'
+                            : 'border-purple-500 bg-purple-500/10 text-white font-semibold'
+                          : isLightMode
+                          ? 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+                          : 'border-[#27272a] bg-[#101017] text-zinc-400 hover:text-white hover:border-zinc-600'
+                      }`}
+                    >
+                      <span className={`block font-bold mb-0.5 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{preset.title}</span>
+                      <span className={`text-[11px] line-clamp-1 ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>{preset.appType}</span>
+                    </button>
+                  ))}
                 </div>
-              </label>
 
-              {/* File upload drag zone */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <label className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-[#3f3f46] hover:border-purple-500 bg-[#0d0d14] cursor-pointer transition-colors text-center group">
-                  <Upload className="w-8 h-8 text-zinc-500 group-hover:text-purple-400 transition-colors mb-2" />
-                  <span className="text-xs font-bold text-white">JSON-Datei hier hochladen</span>
-                  <span className="text-[11px] text-zinc-500 mt-1">.json oder .obsidian-app Datei auswählen</span>
+                {/* Custom app idea input */}
+                <div className="pt-2">
+                  <label className={`text-xs font-semibold block mb-1 ${isLightMode ? 'text-slate-700' : 'text-zinc-300'}`}>
+                    Oder eigene App-Idee eingeben:
+                  </label>
                   <input
-                    type="file"
-                    accept=".json,.obsidian-app,text/plain"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </label>
-
-                {/* Paste JSON code box */}
-                <div className="flex flex-col gap-2">
-                  <textarea
-                    value={jsonInput}
-                    onChange={(e) => setJsonInput(e.target.value)}
-                    placeholder="Oder füge das von der KI generierte JSON hier direkt ein..."
-                    rows={4}
-                    className="w-full flex-1 bg-[#0d0d14] border border-[#27272a] focus:border-purple-500 rounded-2xl p-3 text-xs font-mono text-white placeholder-zinc-600 outline-none resize-none"
-                  />
-                  <button
-                    onClick={() => handleProcessJSON(jsonInput)}
-                    disabled={!jsonInput.trim()}
-                    className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                      jsonInput.trim()
-                        ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg'
-                        : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                    type="text"
+                    value={customIdea}
+                    onChange={(e) => setCustomIdea(e.target.value)}
+                    placeholder="z.B. ein interaktives Memory-Kartenspiel mit Timer und Bestenliste..."
+                    className={`w-full border rounded-xl px-3.5 py-2.5 text-xs outline-none transition-all ${
+                      isLightMode
+                        ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-purple-500'
+                        : 'bg-[#0a0a0f] border-[#27272a] text-white placeholder-zinc-500 focus:border-purple-500'
                     }`}
-                  >
-                    <Zap className="w-4 h-4" />
-                    <span>App aus JSON installieren & auf Desktop platzieren</span>
-                  </button>
+                  />
+                </div>
+
+                {/* Prompt Preview Container */}
+                <div
+                  className={`relative rounded-2xl border p-4 text-[11px] font-mono overflow-x-auto max-h-48 whitespace-pre-wrap ${
+                    isLightMode
+                      ? 'bg-slate-100 border-slate-200 text-slate-800'
+                      : 'bg-[#09090d] border-[#27272a] text-zinc-300'
+                  }`}
+                >
+                  {promptTemplate}
                 </div>
               </div>
 
-              {jsonError && (
-                <div className="flex items-center gap-2 text-xs text-rose-400 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">
-                  <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
-                  <span>{jsonError}</span>
+              {/* Step 2: Hochladen & Ausführen */}
+              <div
+                className={`p-6 rounded-2xl border space-y-4 ${
+                  isLightMode ? 'bg-white border-slate-200 shadow-sm' : 'bg-[#14141e] border-[#27272a]'
+                }`}
+              >
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-purple-600/20 text-purple-600 flex items-center justify-center text-xs font-bold">
+                      2
+                    </span>
+                    <h3 className={`text-sm font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>
+                      Generierte JSON-Datei hochladen & in Firestore speichern
+                    </h3>
+                  </div>
+
+                  <button
+                    onClick={handleTestDemoApp}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 border border-emerald-500/30 text-xs font-semibold transition-all flex items-center gap-1.5"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Demo-App testen</span>
+                  </button>
+                </div>
+
+                {/* Publish to Cloud Firestore Checkbox */}
+                <label
+                  className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer ${
+                    isLightMode ? 'bg-slate-50 border-slate-200' : 'bg-[#0d0d14] border-[#27272a]'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={publishToCloud}
+                    onChange={(e) => setPublishToCloud(e.target.checked)}
+                    className="accent-purple-600 w-4 h-4 rounded"
+                  />
+                  <div>
+                    <span className={`text-xs font-semibold flex items-center gap-1.5 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>
+                      <Cloud className="w-3.5 h-3.5 text-emerald-500" />
+                      <span>In Cloud-AppStore (Firestore) veröffentlichen</span>
+                    </span>
+                    <p className={`text-[10px] ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>
+                      Die App wird dauerhaft in der Firestore-Datenbank gespeichert und steht im Store zum Download bereit.
+                    </p>
+                  </div>
+                </label>
+
+                {/* File upload drag zone */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <label
+                    className={`flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed cursor-pointer transition-colors text-center group ${
+                      isLightMode
+                        ? 'border-slate-300 hover:border-purple-500 bg-slate-50'
+                        : 'border-[#3f3f46] hover:border-purple-500 bg-[#0d0d14]'
+                    }`}
+                  >
+                    <Upload className="w-8 h-8 text-zinc-400 group-hover:text-purple-500 transition-colors mb-2" />
+                    <span className={`text-xs font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>JSON-Datei hier hochladen</span>
+                    <span className={`text-[11px] mt-1 ${isLightMode ? 'text-slate-500' : 'text-zinc-500'}`}>.json oder .obsidian-app Datei auswählen</span>
+                    <input
+                      type="file"
+                      accept=".json,.obsidian-app,text/plain"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  {/* Paste JSON code box */}
+                  <div className="flex flex-col gap-2">
+                    <textarea
+                      value={jsonInput}
+                      onChange={(e) => setJsonInput(e.target.value)}
+                      placeholder="Oder füge das von der KI generierte JSON hier direkt ein..."
+                      rows={4}
+                      className={`w-full flex-1 border rounded-2xl p-3 text-xs font-mono outline-none resize-none ${
+                        isLightMode
+                          ? 'bg-slate-50 border-slate-300 text-slate-900 placeholder-slate-400 focus:border-purple-500'
+                          : 'bg-[#0d0d14] border-[#27272a] text-white placeholder-zinc-600 focus:border-purple-500'
+                      }`}
+                    />
+                    <button
+                      onClick={() => handleProcessJSON(jsonInput)}
+                      disabled={!jsonInput.trim()}
+                      className={`w-full py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                        jsonInput.trim()
+                          ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-lg'
+                          : isLightMode
+                          ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                          : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                      }`}
+                    >
+                      <Zap className="w-4 h-4" />
+                      <span>App aus JSON installieren & auf Desktop platzieren</span>
+                    </button>
+                  </div>
+                </div>
+
+                {jsonError && (
+                  <div className="flex items-center gap-2 text-xs text-rose-500 bg-rose-500/10 p-2.5 rounded-xl border border-rose-500/20">
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
+                    <span>{jsonError}</span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+
+          {/* TAB 3: MEINE APPS */}
+          {activeTab === 'my-apps' && (
+            <motion.div
+              key="tab-my-apps"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+              className="max-w-4xl mx-auto space-y-6"
+            >
+              <div>
+                <h2 className={`text-base font-bold mb-1 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>
+                  Meine installierten Anwendungen
+                </h2>
+                <p className={`text-xs ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  Verwalte deine aus dem Store geladenen und eigens über KI importierten Desktop-Apps (synchronisiert mit Firestore).
+                </p>
+              </div>
+
+              {/* Custom AI Apps List */}
+              {customApps.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-purple-600 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Benutzerdefinierte KI-Apps ({customApps.length})</span>
+                  </h3>
+
+                  <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {customApps.map((app) => (
+                      <motion.div
+                        layout
+                        layoutId={`custom-app-${app.id}`}
+                        key={app.id}
+                        className={`p-4 rounded-2xl border flex items-center justify-between shadow-md ${
+                          isLightMode
+                            ? 'bg-white border-purple-200'
+                            : 'bg-[#14141e] border-purple-500/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-2xl bg-purple-600/20 text-purple-600 flex items-center justify-center text-lg border border-purple-500/30">
+                            {renderAppIcon(app.icon, 'w-5 h-5')}
+                          </div>
+                          <div>
+                            <h4 className={`text-xs font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{app.name}</h4>
+                            <span className="text-[10px] text-emerald-500 font-mono">In Firestore & Desktop</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => openApp(app.id)}
+                            className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow flex items-center gap-1"
+                          >
+                            <Play className="w-3 h-3 fill-white" />
+                            <span>Öffnen</span>
+                          </button>
+                          <button
+                            onClick={() => removeCustomApp(app.id)}
+                            title="Löschen"
+                            className="p-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs transition-all"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </motion.div>
                 </div>
               )}
-            </div>
-          </div>
-        )}
 
-        {/* TAB 3: MEINE APPS */}
-        {activeTab === 'my-apps' && (
-          <div className="max-w-4xl mx-auto space-y-6">
-            <div>
-              <h2 className="text-base font-bold text-white mb-1">Meine installierten Anwendungen</h2>
-              <p className="text-xs text-zinc-400">
-                Verwalte deine aus dem Store geladenen und eigens über KI importierten Desktop-Apps (synchronisiert mit Firestore).
-              </p>
-            </div>
-
-            {/* Custom AI Apps List */}
-            {customApps.length > 0 && (
+              {/* Store Installed Apps List */}
               <div className="space-y-3">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Benutzerdefinierte KI-Apps ({customApps.length})</span>
+                <h3 className={`text-xs font-bold uppercase tracking-wider ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  Store-Apps ({installedAppIds.length})
                 </h3>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {customApps.map((app) => (
-                    <div
+                <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {storeCatalog.filter((a) => installedAppIds.includes(a.id)).map((app) => (
+                    <motion.div
+                      layout
+                      layoutId={`installed-store-app-${app.id}`}
                       key={app.id}
-                      className="p-4 rounded-2xl bg-[#14141e] border border-purple-500/30 flex items-center justify-between shadow-lg"
+                      className={`p-4 rounded-2xl border flex items-center justify-between shadow-sm ${
+                        isLightMode ? 'bg-white border-slate-200' : 'bg-[#14141e] border-[#27272a]'
+                      }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-2xl bg-purple-600/20 text-purple-300 flex items-center justify-center text-lg border border-purple-500/40">
-                          {renderAppIcon(app.icon, 'w-5 h-5')}
+                        <div
+                          className={`w-11 h-11 rounded-2xl border flex items-center justify-center shadow-sm ${
+                            isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-[#1c1c28] border-white/10'
+                          }`}
+                          style={{ color: accentConfig.text }}
+                        >
+                          {renderAppIcon(app.iconName, 'w-5 h-5')}
                         </div>
                         <div>
-                          <h4 className="text-xs font-bold text-white">{app.name}</h4>
-                          <span className="text-[10px] text-emerald-400 font-mono">In Firestore & Desktop</span>
+                          <h4 className={`text-xs font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{app.name}</h4>
+                          <span className={`text-[10px] ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>{app.category}</span>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => openApp(app.id)}
-                          className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow flex items-center gap-1"
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1 ${
+                            isLightMode
+                              ? 'bg-slate-200 hover:bg-slate-300 text-slate-900'
+                              : 'bg-[#252538] hover:bg-[#32324a] text-white'
+                          }`}
                         >
-                          <Play className="w-3 h-3 fill-white" />
+                          <Play className="w-3 h-3 fill-current" />
                           <span>Öffnen</span>
                         </button>
                         <button
-                          onClick={() => removeCustomApp(app.id)}
-                          title="Löschen"
-                          className="p-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs transition-all"
+                          onClick={() => handleUninstall(app.id)}
+                          title="Deinstallieren"
+                          className="p-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                    </div>
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
               </div>
-            )}
+            </motion.div>
+          )}
 
-            {/* Store Installed Apps List */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
-                Store-Apps ({installedAppIds.length})
-              </h3>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {storeCatalog.filter((a) => installedAppIds.includes(a.id)).map((app) => (
-                  <div
-                    key={app.id}
-                    className="p-4 rounded-2xl bg-[#14141e] border border-[#27272a] flex items-center justify-between shadow-md"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className="w-11 h-11 rounded-2xl bg-[#1c1c28] border border-white/10 flex items-center justify-center shadow"
-                        style={{ color: accentConfig.text }}
-                      >
-                        {renderAppIcon(app.iconName, 'w-5 h-5')}
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-white">{app.name}</h4>
-                        <span className="text-[10px] text-zinc-400">{app.category}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openApp(app.id)}
-                        className="px-3 py-1.5 rounded-xl bg-[#252538] hover:bg-[#32324a] text-white text-xs font-semibold flex items-center gap-1"
-                      >
-                        <Play className="w-3 h-3 fill-white" />
-                        <span>Öffnen</span>
-                      </button>
-                      <button
-                        onClick={() => handleUninstall(app.id)}
-                        title="Deinstallieren"
-                        className="p-1.5 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+          {/* TAB 4: WALLPAPERS & THEMES */}
+          {activeTab === 'wallpapers' && (
+            <motion.div
+              key="tab-wallpapers"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.18 }}
+              className="max-w-4xl mx-auto space-y-6"
+            >
+              <div>
+                <h2 className={`text-base font-bold mb-1 ${isLightMode ? 'text-slate-900' : 'text-white'}`}>
+                  Minimalistische Wallpapers
+                </h2>
+                <p className={`text-xs ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>Wähle dein bevorzugtes Hintergrunddesign.</p>
               </div>
-            </div>
-          </div>
-        )}
 
-        {/* TAB 4: WALLPAPERS & THEMES */}
-        {activeTab === 'wallpapers' && (
-          <div className="max-w-4xl mx-auto space-y-6">
-            <div>
-              <h2 className="text-base font-bold text-white mb-1">Minimalistische Dark Wallpapers</h2>
-              <p className="text-xs text-zinc-400">Wähle dein bevorzugtes Hintergrunddesign.</p>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {WALLPAPERS.map((wp) => {
-                const isSelected = settings.wallpaper === wp.id;
-                return (
-                  <div
-                    key={wp.id}
-                    onClick={() => {
-                      updateSettings({ wallpaper: wp.id as WallpaperId });
-                      sounds.playClick();
-                    }}
-                    className={`group cursor-pointer rounded-2xl border overflow-hidden transition-all ${
-                      isSelected
-                        ? 'border-purple-400 ring-2 ring-purple-500/40 scale-[1.02]'
-                        : 'border-[#27272a] hover:border-zinc-500'
-                    }`}
-                  >
-                    <div
-                      className="h-28 flex items-center justify-center p-3 relative"
-                      style={{ background: wp.previewGradient }}
+              <motion.div layout className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {WALLPAPERS.map((wp) => {
+                  const isSelected = settings.wallpaper === wp.id;
+                  return (
+                    <motion.div
+                      layout
+                      layoutId={`wp-card-${wp.id}`}
+                      key={wp.id}
+                      onClick={() => {
+                        updateSettings({ wallpaper: wp.id as WallpaperId });
+                        sounds.playClick();
+                      }}
+                      className={`group cursor-pointer rounded-2xl border overflow-hidden transition-all ${
+                        isSelected
+                          ? 'border-purple-500 ring-2 ring-purple-500/40 scale-[1.02]'
+                          : isLightMode
+                          ? 'border-slate-200 hover:border-slate-400'
+                          : 'border-[#27272a] hover:border-zinc-500'
+                      }`}
                     >
-                      {isSelected && (
-                        <div className="w-7 h-7 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-lg">
-                          <Check className="w-4 h-4" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="p-2.5 bg-[#14141e] flex items-center justify-between text-xs">
-                      <span className="font-semibold text-white truncate">{wp.name}</span>
-                      <span className="text-[10px] text-zinc-400 truncate max-w-[120px]">{wp.description}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
+                      <div
+                        className="h-28 flex items-center justify-center p-3 relative"
+                        style={{ background: wp.previewGradient }}
+                      >
+                        {isSelected && (
+                          <div className="w-7 h-7 rounded-full bg-purple-600 text-white flex items-center justify-center shadow-lg">
+                            <Check className="w-4 h-4" />
+                          </div>
+                        )}
+                      </div>
+                      <div className={`p-2.5 flex items-center justify-between text-xs ${isLightMode ? 'bg-white' : 'bg-[#14141e]'}`}>
+                        <span className={`font-semibold truncate ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{wp.name}</span>
+                        <span className={`text-[10px] truncate max-w-[120px] ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>{wp.description}</span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
 };
+
 

@@ -106,6 +106,7 @@ export const Window: React.FC<{ window?: WindowState; win?: WindowState }> = (pr
     accentConfig,
     settings,
     effectiveTheme,
+    effectiveGlassContrast,
   } = useOS();
 
   // Custom 120fps Dragging State & Ref
@@ -533,36 +534,47 @@ export const Window: React.FC<{ window?: WindowState; win?: WindowState }> = (pr
         backgroundColor: isMaximized
           ? effectiveTheme === 'light'
             ? '#ffffff'
+            : effectiveTheme === 'glassy'
+            ? effectiveGlassContrast === 'dark'
+              ? 'rgba(255, 255, 255, 0.88)'
+              : 'rgba(15, 15, 24, 0.88)'
             : '#000000'
           : effectiveTheme === 'light'
           ? 'rgba(255, 255, 255, 0.96)'
           : effectiveTheme === 'glassy'
-          ? `rgba(15, 15, 24, ${(settings.glassOpacity ?? 65) / 100})`
+          ? effectiveGlassContrast === 'dark'
+            ? `rgba(255, 255, 255, ${(settings.glassOpacity ?? 65) / 100})`
+            : `rgba(15, 15, 24, ${(settings.glassOpacity ?? 65) / 100})`
           : '#09090d',
         backdropFilter:
           isMaximized || settings.glassBlurEnabled === false
             ? 'none'
             : `blur(${settings.glassBlur ?? 24}px)`,
-        color: effectiveTheme === 'light' ? '#0f172a' : '#f8fafc',
+        color:
+          effectiveTheme === 'light' || (effectiveTheme === 'glassy' && effectiveGlassContrast === 'dark')
+            ? '#0f172a'
+            : '#f8fafc',
         boxShadow: isMaximized
           ? 'none'
           : settings.windowShadowIntensity === 'none'
           ? 'none'
           : settings.windowShadowIntensity === 'subtle'
-          ? '0 6px 16px rgba(0, 0, 0, 0.3)'
+          ? '0 6px 16px rgba(0, 0, 0, 0.2)'
           : settings.windowShadowIntensity === 'medium'
-          ? '0 15px 35px -10px rgba(0, 0, 0, 0.55)'
+          ? '0 15px 35px -10px rgba(0, 0, 0, 0.45)'
           : settings.windowShadowIntensity === 'deep'
-          ? '0 30px 60px -15px rgba(0, 0, 0, 0.75), 0 0 2px rgba(255, 255, 255, 0.15)'
+          ? '0 30px 60px -15px rgba(0, 0, 0, 0.65), 0 0 2px rgba(255, 255, 255, 0.15)'
           : isActive && (settings.windowGlow ?? true)
-          ? `0 25px 50px -12px rgba(0, 0, 0, 0.65), 0 0 25px ${accentConfig.glow}`
-          : '0 20px 40px -15px rgba(0, 0, 0, 0.55)',
+          ? `0 25px 50px -12px rgba(0, 0, 0, 0.55), 0 0 25px ${accentConfig.glow}`
+          : '0 20px 40px -15px rgba(0, 0, 0, 0.45)',
         border: isMaximized
           ? 'none'
           : effectiveTheme === 'light'
           ? `1px solid ${isActive ? accentConfig.primary : '#cbd5e1'}`
           : effectiveTheme === 'glassy'
-          ? `1px solid ${isActive ? accentConfig.primary : 'rgba(255, 255, 255, 0.22)'}`
+          ? effectiveGlassContrast === 'dark'
+            ? `1px solid ${isActive ? accentConfig.primary : 'rgba(0, 0, 0, 0.15)'}`
+            : `1px solid ${isActive ? accentConfig.primary : 'rgba(255, 255, 255, 0.22)'}`
           : `1px solid ${isActive ? accentConfig.border : 'rgba(255, 255, 255, 0.08)'}`,
       }}
     >
@@ -574,11 +586,17 @@ export const Window: React.FC<{ window?: WindowState; win?: WindowState }> = (pr
           isMaximized
             ? effectiveTheme === 'light'
               ? 'bg-slate-100 border-slate-200 text-slate-900'
+              : effectiveTheme === 'glassy'
+              ? effectiveGlassContrast === 'dark'
+                ? 'bg-white/70 border-black/10 text-zinc-900'
+                : 'bg-white/[0.12] border-white/15 text-white'
               : 'bg-[#0e0e14] border-zinc-800 text-white'
             : effectiveTheme === 'light'
             ? 'bg-slate-100/90 border-slate-200 text-slate-900'
             : effectiveTheme === 'glassy'
-            ? 'bg-white/[0.12] border-white/15 text-white'
+            ? effectiveGlassContrast === 'dark'
+              ? 'bg-white/40 border-black/10 text-zinc-900'
+              : 'bg-white/[0.12] border-white/15 text-white'
             : 'bg-[#14141d]/95 border-white/[0.08] text-zinc-200'
         }`}
         style={{

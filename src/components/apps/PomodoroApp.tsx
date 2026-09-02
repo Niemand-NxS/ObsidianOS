@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useOS } from '../../context/OSContext';
 import { Play, Pause, RotateCcw, Check, Plus, Trash2, Bell, Coffee, Target } from 'lucide-react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 
 type Mode = 'work' | 'shortBreak' | 'longBreak';
 
@@ -12,7 +12,8 @@ const MODE_TIMES: Record<Mode, number> = {
 };
 
 export const PomodoroApp: React.FC = () => {
-  const { sounds, accentConfig, addNotification } = useOS();
+  const { sounds, accentConfig, addNotification, isLight, effectiveGlassContrast } = useOS();
+  const isLightMode = isLight || effectiveGlassContrast === 'dark';
 
   const [mode, setMode] = useState<Mode>('work');
   const [timeLeft, setTimeLeft] = useState(MODE_TIMES.work);
@@ -112,37 +113,94 @@ export const PomodoroApp: React.FC = () => {
   const progressPercent = ((totalTime - timeLeft) / totalTime) * 100;
 
   return (
-    <div className="flex flex-col md:flex-row h-full w-full bg-[#0a0a0e] text-[#f4f4f5] select-none font-sans overflow-hidden">
+    <div
+      className={`flex flex-col md:flex-row h-full w-full select-none font-sans overflow-hidden transition-colors ${
+        isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0a0e] text-[#f4f4f5]'
+      }`}
+    >
       {/* Left Column: Timer Dial & Controls */}
-      <div className="flex-1 flex flex-col items-center justify-between p-6 border-b md:border-b-0 md:border-r border-[#27272a]/60">
+      <div
+        className={`flex-1 flex flex-col items-center justify-between p-6 border-b md:border-b-0 md:border-r transition-colors ${
+          isLightMode ? 'border-slate-200' : 'border-[#27272a]/60'
+        }`}
+      >
         {/* Mode Selector Tabs */}
-        <div className="flex bg-[#14141d] p-1 rounded-2xl border border-[#27272a] gap-1">
+        <div
+          className={`flex p-1 rounded-2xl border gap-1 relative transition-colors ${
+            isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-[#14141d] border-[#27272a]'
+          }`}
+        >
           <button
             onClick={() => handleModeSwitch('work')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
-              mode === 'work' ? 'bg-[#222230] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+            className={`relative px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all z-10 ${
+              mode === 'work'
+                ? isLightMode
+                  ? 'text-slate-900 font-bold'
+                  : 'text-white font-bold'
+                : isLightMode
+                ? 'text-slate-600 hover:text-slate-900'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Target className="w-3.5 h-3.5 text-purple-400" />
-            <span>Fokus (25m)</span>
+            {mode === 'work' && (
+              <motion.div
+                layoutId="pomo-mode-bubble"
+                className={`absolute inset-0 rounded-xl shadow-xs ${
+                  isLightMode ? 'bg-white border border-slate-200/90' : 'bg-[#222230] border border-white/10'
+                }`}
+                transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+              />
+            )}
+            <Target className="w-3.5 h-3.5 text-purple-500 relative z-10" />
+            <span className="relative z-10">Fokus (25m)</span>
           </button>
           <button
             onClick={() => handleModeSwitch('shortBreak')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
-              mode === 'shortBreak' ? 'bg-[#222230] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+            className={`relative px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all z-10 ${
+              mode === 'shortBreak'
+                ? isLightMode
+                  ? 'text-slate-900 font-bold'
+                  : 'text-white font-bold'
+                : isLightMode
+                ? 'text-slate-600 hover:text-slate-900'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Coffee className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Kurze Pause (5m)</span>
+            {mode === 'shortBreak' && (
+              <motion.div
+                layoutId="pomo-mode-bubble"
+                className={`absolute inset-0 rounded-xl shadow-xs ${
+                  isLightMode ? 'bg-white border border-slate-200/90' : 'bg-[#222230] border border-white/10'
+                }`}
+                transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+              />
+            )}
+            <Coffee className="w-3.5 h-3.5 text-emerald-500 relative z-10" />
+            <span className="relative z-10">Kurze Pause (5m)</span>
           </button>
           <button
             onClick={() => handleModeSwitch('longBreak')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
-              mode === 'longBreak' ? 'bg-[#222230] text-white shadow-sm' : 'text-zinc-400 hover:text-white'
+            className={`relative px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all z-10 ${
+              mode === 'longBreak'
+                ? isLightMode
+                  ? 'text-slate-900 font-bold'
+                  : 'text-white font-bold'
+                : isLightMode
+                ? 'text-slate-600 hover:text-slate-900'
+                : 'text-zinc-400 hover:text-white'
             }`}
           >
-            <Coffee className="w-3.5 h-3.5 text-blue-400" />
-            <span>Lange Pause (15m)</span>
+            {mode === 'longBreak' && (
+              <motion.div
+                layoutId="pomo-mode-bubble"
+                className={`absolute inset-0 rounded-xl shadow-xs ${
+                  isLightMode ? 'bg-white border border-slate-200/90' : 'bg-[#222230] border border-white/10'
+                }`}
+                transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+              />
+            )}
+            <Coffee className="w-3.5 h-3.5 text-blue-500 relative z-10" />
+            <span className="relative z-10">Lange Pause (15m)</span>
           </button>
         </div>
 
@@ -153,7 +211,7 @@ export const PomodoroApp: React.FC = () => {
               cx="50"
               cy="50"
               r="44"
-              className="stroke-zinc-800"
+              className={isLightMode ? 'stroke-slate-200' : 'stroke-zinc-800'}
               strokeWidth="5"
               fill="transparent"
             />
@@ -172,10 +230,10 @@ export const PomodoroApp: React.FC = () => {
           </svg>
 
           <div className="absolute flex flex-col items-center">
-            <span className="text-5xl font-extrabold font-mono tracking-tight text-white drop-shadow-md">
+            <span className={`text-5xl font-extrabold font-mono tracking-tight drop-shadow-sm ${isLightMode ? 'text-slate-900' : 'text-white'}`}>
               {formattedTime}
             </span>
-            <span className="text-xs text-zinc-400 font-medium mt-1 uppercase tracking-wider">
+            <span className={`text-xs font-semibold mt-1 uppercase tracking-wider ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>
               {mode === 'work' ? 'Fokusphase' : 'Erholung'}
             </span>
           </div>
@@ -194,7 +252,11 @@ export const PomodoroApp: React.FC = () => {
 
           <button
             onClick={handleReset}
-            className="p-3 rounded-2xl bg-[#14141d] hover:bg-[#1e1e2b] border border-[#27272a] text-zinc-300 hover:text-white transition-colors"
+            className={`p-3 rounded-2xl border transition-colors ${
+              isLightMode
+                ? 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-xs'
+                : 'bg-[#14141d] hover:bg-[#1e1e2b] border-[#27272a] text-zinc-300 hover:text-white'
+            }`}
             title="Zurücksetzen"
           >
             <RotateCcw className="w-4 h-4" />
@@ -202,17 +264,21 @@ export const PomodoroApp: React.FC = () => {
         </div>
 
         {/* Completed Cycles Counter */}
-        <div className="mt-3 text-xs text-zinc-400 font-mono">
-          Abgeschlossene Zyklen: <span className="text-purple-300 font-bold">{completedCycles} 🍅</span>
+        <div className={`mt-3 text-xs font-mono ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>
+          Abgeschlossene Zyklen: <span className="font-bold text-purple-600 dark:text-purple-300">{completedCycles} 🍅</span>
         </div>
       </div>
 
       {/* Right Column: Mini Task Checklist */}
-      <div className="w-full md:w-80 flex flex-col justify-between p-5 bg-[#0e0e14] overflow-y-auto">
+      <div
+        className={`w-full md:w-80 flex flex-col justify-between p-5 overflow-y-auto transition-colors ${
+          isLightMode ? 'bg-white border-slate-200' : 'bg-[#0e0e14]'
+        }`}
+      >
         <div className="space-y-4">
-          <div className="flex items-center justify-between border-b border-[#27272a]/60 pb-2">
-            <h3 className="text-sm font-bold text-white">Fokus-Aufgaben</h3>
-            <span className="text-[11px] text-zinc-400 font-mono">
+          <div className={`flex items-center justify-between border-b pb-2 ${isLightMode ? 'border-slate-200' : 'border-[#27272a]/60'}`}>
+            <h3 className={`text-sm font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Fokus-Aufgaben</h3>
+            <span className={`text-[11px] font-mono ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>
               {tasks.filter((t) => t.done).length}/{tasks.length}
             </span>
           </div>
@@ -224,11 +290,15 @@ export const PomodoroApp: React.FC = () => {
               value={newTaskInput}
               onChange={(e) => setNewTaskInput(e.target.value)}
               placeholder="Neue Aufgabe..."
-              className="flex-1 bg-[#14141d] border border-[#27272a] focus:border-purple-500 rounded-xl px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none"
+              className={`flex-1 border rounded-xl px-3 py-1.5 text-xs focus:outline-none transition-colors ${
+                isLightMode
+                  ? 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-purple-500 focus:bg-white'
+                  : 'bg-[#14141d] border-[#27272a] text-white placeholder-zinc-500 focus:border-purple-500'
+              }`}
             />
             <button
               type="submit"
-              className="p-2 rounded-xl text-white shadow-sm"
+              className="p-2 rounded-xl text-white shadow-sm transition-all"
               style={{ backgroundColor: accentConfig.primary }}
             >
               <Plus className="w-3.5 h-3.5" />
@@ -236,42 +306,59 @@ export const PomodoroApp: React.FC = () => {
           </form>
 
           {/* Task List */}
-          <div className="space-y-2">
-            {tasks.map((task) => (
-              <div
-                key={task.id}
-                onClick={() => toggleTask(task.id)}
-                className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                  task.done
-                    ? 'bg-[#12121a]/60 border-zinc-800 text-zinc-500 line-through'
-                    : 'bg-[#14141d] border-[#27272a] text-zinc-200 hover:border-zinc-700'
-                }`}
-              >
-                <div className="flex items-center gap-2 min-w-0 pr-2">
-                  <div
-                    className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 ${
-                      task.done
-                        ? 'bg-purple-600 border-purple-500 text-white'
-                        : 'border-zinc-600 bg-[#0d0d12]'
+          <motion.div layout className="space-y-2">
+            <AnimatePresence>
+              {tasks.map((task) => (
+                <motion.div
+                  layout
+                  layoutId={`pomodoro-task-${task.id}`}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  key={task.id}
+                  onClick={() => toggleTask(task.id)}
+                  className={`p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
+                    task.done
+                      ? isLightMode
+                        ? 'bg-slate-100/70 border-slate-200 text-slate-400 line-through'
+                        : 'bg-[#12121a]/60 border-zinc-800 text-zinc-500 line-through'
+                      : isLightMode
+                      ? 'bg-slate-50 border-slate-200 text-slate-800 hover:border-purple-300 shadow-xs'
+                      : 'bg-[#14141d] border-[#27272a] text-zinc-200 hover:border-zinc-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0 pr-2">
+                    <div
+                      className={`w-4 h-4 rounded-md border flex items-center justify-center shrink-0 ${
+                        task.done
+                          ? 'bg-purple-600 border-purple-500 text-white'
+                          : isLightMode
+                          ? 'border-slate-300 bg-white'
+                          : 'border-zinc-600 bg-[#0d0d12]'
+                      }`}
+                    >
+                      {task.done && <Check className="w-3 h-3 stroke-[3]" />}
+                    </div>
+                    <span className="text-xs truncate">{task.text}</span>
+                  </div>
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteTask(task.id);
+                    }}
+                    className={`p-1 rounded-lg transition-colors ${
+                      isLightMode
+                        ? 'text-slate-400 hover:text-red-500 hover:bg-slate-200'
+                        : 'text-zinc-500 hover:text-red-400 hover:bg-white/5 opacity-40 hover:opacity-100'
                     }`}
                   >
-                    {task.done && <Check className="w-3 h-3 stroke-[3]" />}
-                  </div>
-                  <span className="text-xs truncate">{task.text}</span>
-                </div>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteTask(task.id);
-                  }}
-                  className="p-1 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-white/5 opacity-40 hover:opacity-100"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-          </div>
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </motion.div>
         </div>
       </div>
     </div>

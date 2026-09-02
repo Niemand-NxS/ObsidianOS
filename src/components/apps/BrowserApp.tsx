@@ -34,7 +34,8 @@ const DEFAULT_BOOKMARKS = [
 ];
 
 export const BrowserApp: React.FC = () => {
-  const { accentConfig, addNotification, sounds } = useOS();
+  const { accentConfig, addNotification, sounds, isLight, effectiveGlassContrast } = useOS();
+  const isLightMode = isLight || effectiveGlassContrast === 'dark';
 
   const [tabs, setTabs] = useState<BrowserTab[]>([
     {
@@ -274,42 +275,65 @@ export const BrowserApp: React.FC = () => {
   };
 
   return (
-    <div id="browser-app" className="flex flex-col h-full w-full bg-[#0a0a0e] text-[#f4f4f5] select-none">
+    <div
+      id="browser-app"
+      className={`flex flex-col h-full w-full select-none transition-colors ${
+        isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0a0a0e] text-[#f4f4f5]'
+      }`}
+    >
       {/* Top Tab Bar (Hidden in Fullscreen Web Mode) */}
       {!isFullscreenWeb && (
-        <div className="h-10 bg-[#121218] border-b border-[#27272a]/70 flex items-center px-2 gap-1 overflow-x-auto shrink-0">
-          {tabs.map((tab) => {
-            const isActive = tab.id === activeTabId;
-            return (
-              <div
-                key={tab.id}
-                onClick={() => {
-                  setActiveTabId(tab.id);
-                  setUrlInput(tab.url);
-                }}
-                className={`group max-w-[180px] min-w-[110px] h-8 px-3 rounded-t-xl flex items-center justify-between text-xs cursor-pointer border-t border-x transition-all ${
-                  isActive
-                    ? 'bg-[#181822] text-white border-[#3f3f46]/60 shadow-sm font-semibold'
-                    : 'bg-[#0f0f14] text-zinc-400 border-transparent hover:bg-[#14141c] hover:text-zinc-200'
-                }`}
-              >
-                <div className="flex items-center gap-1.5 truncate">
-                  <Globe className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                  <span className="truncate">{tab.title}</span>
-                </div>
-                <button
-                  onClick={(e) => handleCloseTab(tab.id, e)}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded-full hover:bg-zinc-700/60 ml-1"
+        <div
+          className={`h-10 border-b flex items-center px-2 gap-1 overflow-x-auto shrink-0 transition-colors ${
+            isLightMode ? 'bg-slate-200/90 border-slate-300' : 'bg-[#121218] border-[#27272a]/70'
+          }`}
+        >
+          <motion.div layout className="flex items-center gap-1">
+            {tabs.map((tab) => {
+              const isActive = tab.id === activeTabId;
+              return (
+                <motion.div
+                  layout
+                  layoutId={`browser-tab-${tab.id}`}
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTabId(tab.id);
+                    setUrlInput(tab.url);
+                  }}
+                  className={`group max-w-[180px] min-w-[110px] h-8 px-3 rounded-t-xl flex items-center justify-between text-xs cursor-pointer border-t border-x transition-all ${
+                    isActive
+                      ? isLightMode
+                        ? 'bg-white text-slate-900 border-slate-300 shadow-sm font-semibold'
+                        : 'bg-[#181822] text-white border-[#3f3f46]/60 shadow-sm font-semibold'
+                      : isLightMode
+                      ? 'bg-slate-200/50 text-slate-600 border-transparent hover:bg-slate-200 hover:text-slate-900'
+                      : 'bg-[#0f0f14] text-zinc-400 border-transparent hover:bg-[#14141c] hover:text-zinc-200'
+                  }`}
                 >
-                  <X className="w-3 h-3 text-zinc-400" />
-                </button>
-              </div>
-            );
-          })}
+                  <div className="flex items-center gap-1.5 truncate">
+                    <Globe className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                    <span className="truncate">{tab.title}</span>
+                  </div>
+                  <button
+                    onClick={(e) => handleCloseTab(tab.id, e)}
+                    className={`opacity-0 group-hover:opacity-100 p-0.5 rounded-full ml-1 ${
+                      isLightMode ? 'hover:bg-slate-200 text-slate-500' : 'hover:bg-zinc-700/60 text-zinc-400'
+                    }`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </motion.div>
+              );
+            })}
+          </motion.div>
 
           <button
             onClick={handleCreateTab}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-[#1f1f2a] transition-all ml-1"
+            className={`p-1.5 rounded-lg transition-all ml-1 ${
+              isLightMode
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-300'
+                : 'text-zinc-400 hover:text-white hover:bg-[#1f1f2a]'
+            }`}
             title="Neuer Tab"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -318,7 +342,11 @@ export const BrowserApp: React.FC = () => {
       )}
 
       {/* Navigation Toolbar & URL Bar */}
-      <div className="h-12 bg-[#161620] border-b border-[#27272a] px-3 flex items-center gap-2 shrink-0 relative">
+      <div
+        className={`h-12 border-b px-3 flex items-center gap-2 shrink-0 relative transition-colors ${
+          isLightMode ? 'bg-slate-100 border-slate-300' : 'bg-[#161620] border-[#27272a]'
+        }`}
+      >
         <div className="flex items-center gap-1">
           {/* Back Button (Tab-specific) */}
           <button
@@ -326,7 +354,11 @@ export const BrowserApp: React.FC = () => {
             disabled={!activeTab || activeTab.historyIndex <= 0}
             className={`p-1.5 rounded-lg transition-colors ${
               activeTab && activeTab.historyIndex > 0
-                ? 'text-zinc-200 hover:text-white hover:bg-[#222230]'
+                ? isLightMode
+                  ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-200'
+                  : 'text-zinc-200 hover:text-white hover:bg-[#222230]'
+                : isLightMode
+                ? 'text-slate-300 cursor-not-allowed'
                 : 'text-zinc-600 cursor-not-allowed'
             }`}
             title="Zurück in diesem Tab"
@@ -340,7 +372,11 @@ export const BrowserApp: React.FC = () => {
             disabled={!activeTab || activeTab.historyIndex >= activeTab.history.length - 1}
             className={`p-1.5 rounded-lg transition-colors ${
               activeTab && activeTab.historyIndex < activeTab.history.length - 1
-                ? 'text-zinc-200 hover:text-white hover:bg-[#222230]'
+                ? isLightMode
+                  ? 'text-slate-700 hover:text-slate-900 hover:bg-slate-200'
+                  : 'text-zinc-200 hover:text-white hover:bg-[#222230]'
+                : isLightMode
+                ? 'text-slate-300 cursor-not-allowed'
                 : 'text-zinc-600 cursor-not-allowed'
             }`}
             title="Vorwärts in diesem Tab"
@@ -351,16 +387,24 @@ export const BrowserApp: React.FC = () => {
           {/* Reload */}
           <button
             onClick={() => navigateTo(urlInput)}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-[#222230] transition-colors"
+            className={`p-1.5 rounded-lg transition-colors ${
+              isLightMode
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                : 'text-zinc-400 hover:text-white hover:bg-[#222230]'
+            }`}
             title="Neu laden"
           >
-            <RotateCw className={`w-4 h-4 ${activeTab.isLoading ? 'animate-spin text-purple-400' : ''}`} />
+            <RotateCw className={`w-4 h-4 ${activeTab.isLoading ? 'animate-spin text-purple-500' : ''}`} />
           </button>
 
           {/* Home */}
           <button
             onClick={() => navigateTo('https://duckduckgo.com')}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-[#222230] transition-colors"
+            className={`p-1.5 rounded-lg transition-colors ${
+              isLightMode
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                : 'text-zinc-400 hover:text-white hover:bg-[#222230]'
+            }`}
             title="Startseite (DuckDuckGo)"
           >
             <Home className="w-4 h-4" />
@@ -373,24 +417,39 @@ export const BrowserApp: React.FC = () => {
             e.preventDefault();
             navigateTo(urlInput);
           }}
-          className="flex-1 flex items-center bg-[#0d0d12] border border-[#27272a] focus-within:border-purple-500 rounded-xl px-3 py-1.5 gap-2 transition-all shadow-inner"
+          className={`flex-1 flex items-center border rounded-xl px-3 py-1.5 gap-2 transition-all ${
+            isLightMode
+              ? 'bg-white border-slate-300 focus-within:border-purple-500 shadow-sm'
+              : 'bg-[#0d0d12] border-[#27272a] focus-within:border-purple-500 shadow-inner'
+          }`}
         >
-          <Search className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+          <Search className="w-3.5 h-3.5 text-purple-500 shrink-0" />
           <input
             type="text"
             value={urlInput}
             onChange={(e) => setUrlInput(e.target.value)}
             placeholder="URL eingeben oder mit DuckDuckGo suchen..."
-            className="w-full bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none font-sans"
+            className={`w-full bg-transparent text-xs focus:outline-none font-sans ${
+              isLightMode ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-zinc-500'
+            }`}
           />
-          <button type="submit" className="text-zinc-400 hover:text-purple-400">
+          <button
+            type="submit"
+            className={isLightMode ? 'text-slate-400 hover:text-purple-600' : 'text-zinc-400 hover:text-purple-400'}
+          >
             <Search className="w-3.5 h-3.5" />
           </button>
         </form>
 
         {/* Zoom Indicator */}
         {(activeTab.zoomLevel || 100) !== 100 && (
-          <span className="text-[10px] font-mono text-purple-300 bg-purple-950/40 px-2 py-0.5 rounded border border-purple-500/30">
+          <span
+            className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+              isLightMode
+                ? 'text-purple-700 bg-purple-50 border-purple-200 font-semibold'
+                : 'text-purple-300 bg-purple-950/40 border-purple-500/30'
+            }`}
+          >
             {activeTab.zoomLevel}%
           </span>
         )}
@@ -400,7 +459,11 @@ export const BrowserApp: React.FC = () => {
           onClick={() => setUseProxy(!useProxy)}
           className={`px-2 py-1 rounded-lg text-[10px] font-mono border transition-all ${
             useProxy
-              ? 'bg-purple-900/30 text-purple-300 border-purple-500/40'
+              ? isLightMode
+                ? 'bg-purple-100 text-purple-700 border-purple-300 font-semibold'
+                : 'bg-purple-900/30 text-purple-300 border-purple-500/40'
+              : isLightMode
+              ? 'bg-slate-200 text-slate-700 border-slate-300'
               : 'bg-[#1e1e28] text-zinc-400 border-zinc-700'
           }`}
           title="Proxy-Modus für externe Webseiten"
@@ -414,7 +477,11 @@ export const BrowserApp: React.FC = () => {
             id="browser-btn-more-options"
             onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)}
             className={`p-1.5 rounded-lg transition-all ${
-              isMoreMenuOpen ? 'bg-purple-600 text-white' : 'text-zinc-400 hover:text-white hover:bg-[#222230]'
+              isMoreMenuOpen
+                ? 'bg-purple-600 text-white'
+                : isLightMode
+                ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                : 'text-zinc-400 hover:text-white hover:bg-[#222230]'
             }`}
             title="Weitere Funktionen & Einstellungen"
           >
@@ -428,11 +495,17 @@ export const BrowserApp: React.FC = () => {
                 initial={{ opacity: 0, y: -4, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                className="absolute top-10 right-0 w-64 rounded-2xl bg-[#14141c]/95 backdrop-blur-2xl border border-[#27272a] shadow-2xl p-1.5 z-50 text-xs space-y-0.5"
+                className={`absolute top-10 right-0 w-64 rounded-2xl backdrop-blur-2xl border shadow-2xl p-1.5 z-50 text-xs space-y-0.5 transition-colors ${
+                  isLightMode
+                    ? 'bg-white/95 border-slate-200 text-slate-900 shadow-slate-300/50'
+                    : 'bg-[#14141c]/95 border-[#27272a] text-white'
+                }`}
               >
-                <div className="px-3 py-1.5 border-b border-[#27272a]/60">
-                  <p className="font-bold text-white text-xs">Webseiten-Funktionen</p>
-                  <p className="text-[10px] text-zinc-400 font-mono truncate">{activeTab.url}</p>
+                <div className={`px-3 py-1.5 border-b ${isLightMode ? 'border-slate-200' : 'border-[#27272a]/60'}`}>
+                  <p className={`font-bold text-xs ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Webseiten-Funktionen</p>
+                  <p className={`text-[10px] font-mono truncate ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>
+                    {activeTab.url}
+                  </p>
                 </div>
 
                 {/* Toggle Fullscreen Web */}
@@ -441,77 +514,89 @@ export const BrowserApp: React.FC = () => {
                     setIsFullscreenWeb(!isFullscreenWeb);
                     setIsMoreMenuOpen(false);
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-colors text-left ${
+                    isLightMode ? 'text-slate-800 hover:bg-slate-100 hover:text-slate-900' : 'text-zinc-200 hover:bg-[#22222f] hover:text-white'
+                  }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    {isFullscreenWeb ? <Minimize className="w-3.5 h-3.5 text-purple-400" /> : <Maximize className="w-3.5 h-3.5 text-purple-400" />}
+                    {isFullscreenWeb ? <Minimize className="w-3.5 h-3.5 text-purple-500" /> : <Maximize className="w-3.5 h-3.5 text-purple-500" />}
                     <span>{isFullscreenWeb ? 'Vollbild beenden' : 'Webseite Vollbild'}</span>
                   </div>
-                  <span className="text-[10px] text-zinc-500 font-mono">F11</span>
+                  <span className={`text-[10px] font-mono ${isLightMode ? 'text-slate-400' : 'text-zinc-500'}`}>F11</span>
                 </button>
 
                 {/* Duplicate Tab */}
                 <button
                   onClick={handleDuplicateTab}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${
+                    isLightMode ? 'text-slate-800 hover:bg-slate-100 hover:text-slate-900' : 'text-zinc-200 hover:bg-[#22222f] hover:text-white'
+                  }`}
                 >
-                  <Layers className="w-3.5 h-3.5 text-purple-400" />
+                  <Layers className="w-3.5 h-3.5 text-purple-500" />
                   <span>Tab duplizieren</span>
                 </button>
 
                 {/* Copy URL */}
                 <button
                   onClick={handleCopyUrl}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${
+                    isLightMode ? 'text-slate-800 hover:bg-slate-100 hover:text-slate-900' : 'text-zinc-200 hover:bg-[#22222f] hover:text-white'
+                  }`}
                 >
-                  <Copy className="w-3.5 h-3.5 text-purple-400" />
+                  <Copy className="w-3.5 h-3.5 text-purple-500" />
                   <span>URL kopieren</span>
                 </button>
 
                 {/* Add Bookmark */}
                 <button
                   onClick={handleAddBookmark}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${
+                    isLightMode ? 'text-slate-800 hover:bg-slate-100 hover:text-slate-900' : 'text-zinc-200 hover:bg-[#22222f] hover:text-white'
+                  }`}
                 >
-                  <Bookmark className="w-3.5 h-3.5 text-amber-400" />
+                  <Bookmark className="w-3.5 h-3.5 text-amber-500" />
                   <span>Zu Lesezeichen hinzufügen</span>
                 </button>
 
                 {/* Reader Mode */}
                 <button
                   onClick={handleToggleReader}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-colors text-left ${
+                    isLightMode ? 'text-slate-800 hover:bg-slate-100 hover:text-slate-900' : 'text-zinc-200 hover:bg-[#22222f] hover:text-white'
+                  }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <BookOpen className="w-3.5 h-3.5 text-purple-400" />
+                    <BookOpen className="w-3.5 h-3.5 text-purple-500" />
                     <span>Leseansicht (Reader)</span>
                   </div>
-                  {activeTab.isReaderMode && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                  {activeTab.isReaderMode && <Check className="w-3.5 h-3.5 text-emerald-500" />}
                 </button>
 
-                <div className="border-t border-[#27272a]/60 my-1" />
+                <div className={`border-t my-1 ${isLightMode ? 'border-slate-200' : 'border-[#27272a]/60'}`} />
 
                 {/* Zoom Controls */}
-                <div className="px-3 py-1.5 flex items-center justify-between text-zinc-300">
+                <div className={`px-3 py-1.5 flex items-center justify-between ${isLightMode ? 'text-slate-700' : 'text-zinc-300'}`}>
                   <span className="text-[11px]">Zoom ({activeTab.zoomLevel || 100}%)</span>
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleAdjustZoom(-10)}
-                      className="p-1 rounded hover:bg-white/10 text-zinc-300"
+                      className={`p-1 rounded ${isLightMode ? 'hover:bg-slate-200 text-slate-700' : 'hover:bg-white/10 text-zinc-300'}`}
                       title="Verkleinern"
                     >
                       <ZoomOut className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={handleResetZoom}
-                      className="px-1.5 py-0.5 rounded hover:bg-white/10 text-[10px] font-mono text-zinc-400 hover:text-white"
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                        isLightMode ? 'hover:bg-slate-200 text-slate-600 hover:text-slate-900' : 'hover:bg-white/10 text-zinc-400 hover:text-white'
+                      }`}
                       title="100% Zurücksetzen"
                     >
                       100%
                     </button>
                     <button
                       onClick={() => handleAdjustZoom(10)}
-                      className="p-1 rounded hover:bg-white/10 text-zinc-300"
+                      className={`p-1 rounded ${isLightMode ? 'hover:bg-slate-200 text-slate-700' : 'hover:bg-white/10 text-zinc-300'}`}
                       title="Vergrößern"
                     >
                       <ZoomIn className="w-3.5 h-3.5" />
@@ -525,9 +610,11 @@ export const BrowserApp: React.FC = () => {
                     setIsMoreMenuOpen(false);
                     window.print();
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${
+                    isLightMode ? 'text-slate-800 hover:bg-slate-100 hover:text-slate-900' : 'text-zinc-200 hover:bg-[#22222f] hover:text-white'
+                  }`}
                 >
-                  <Printer className="w-3.5 h-3.5 text-zinc-400" />
+                  <Printer className={`w-3.5 h-3.5 ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`} />
                   <span>Drucken / PDF exportieren</span>
                 </button>
               </motion.div>
@@ -538,23 +625,35 @@ export const BrowserApp: React.FC = () => {
 
       {/* Bookmarks Bar (Hidden in Fullscreen Web Mode) */}
       {!isFullscreenWeb && (
-        <div className="h-8 bg-[#111117] border-b border-[#27272a]/60 px-3 flex items-center gap-2 overflow-x-auto shrink-0">
-          <Bookmark className="w-3 h-3 text-purple-400 shrink-0" />
-          {bookmarks.map((bm, i) => (
-            <button
-              key={i}
-              onClick={() => navigateTo(bm.url)}
-              className="flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] text-zinc-300 hover:text-white hover:bg-[#1a1a24] transition-all whitespace-nowrap"
-            >
-              <span>{bm.icon}</span>
-              <span>{bm.name}</span>
-            </button>
-          ))}
+        <div
+          className={`h-8 border-b px-3 flex items-center gap-2 overflow-x-auto shrink-0 transition-colors ${
+            isLightMode ? 'bg-slate-100/70 border-slate-200' : 'bg-[#111117] border-[#27272a]/60'
+          }`}
+        >
+          <Bookmark className="w-3 h-3 text-purple-500 shrink-0" />
+          <motion.div layout className="flex items-center gap-2">
+            {bookmarks.map((bm, i) => (
+              <motion.button
+                layout
+                layoutId={`bm-${bm.name}`}
+                key={i}
+                onClick={() => navigateTo(bm.url)}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] transition-all whitespace-nowrap ${
+                  isLightMode
+                    ? 'text-slate-700 hover:text-slate-900 hover:bg-white border border-transparent hover:border-slate-300 shadow-sm'
+                    : 'text-zinc-300 hover:text-white hover:bg-[#1a1a24]'
+                }`}
+              >
+                <span>{bm.icon}</span>
+                <span>{bm.name}</span>
+              </motion.button>
+            ))}
+          </motion.div>
         </div>
       )}
 
       {/* Browser View Area with Fullscreen & Zoom Transform */}
-      <div className="flex-1 bg-[#09090c] relative overflow-hidden">
+      <div className={`flex-1 relative overflow-hidden ${isLightMode ? 'bg-slate-100' : 'bg-[#09090c]'}`}>
         <div
           className="w-full h-full relative"
           style={{

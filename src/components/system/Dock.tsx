@@ -70,6 +70,9 @@ export const Dock: React.FC = () => {
     cloudSync,
     recentApps,
     customApps,
+    effectiveTheme,
+    effectiveGlassContrast,
+    isLight,
   } = useOS();
 
   const [hoveredAppId, setHoveredAppId] = useState<string | null>(null);
@@ -82,9 +85,31 @@ export const Dock: React.FC = () => {
   const shouldAutoHide = settings.dockAutoHide || hasMaximizedWindow;
   const isDockVisible = !shouldAutoHide || isEdgeHovered;
 
+  // Resolve Icon Style for Dock
+  const resolvedIconStyle = React.useMemo(() => {
+    if (settings.iconStyle && settings.iconStyle !== 'auto') {
+      return settings.iconStyle;
+    }
+    if (effectiveTheme === 'glassy') return 'glassy';
+    if (effectiveTheme === 'light') return 'light';
+    return 'glassy';
+  }, [settings.iconStyle, effectiveTheme]);
+
+  const iconGlassOpacity = (settings.iconGlassOpacity ?? 55) / 100;
+  const iconGlassBlur = settings.iconGlassBlur ?? 20;
+  const iconRadiusClass = settings.iconRadius || 'rounded-xl';
+
   const getIconForApp = (iconName: string) => {
     const Component = ICON_COMPONENTS[iconName] || Settings;
-    return <Component className="w-5 h-5 text-white" />;
+    const iconColor =
+      resolvedIconStyle === 'light'
+        ? accentConfig.primary
+        : resolvedIconStyle === 'dark' || resolvedIconStyle === 'colored'
+        ? '#ffffff'
+        : effectiveGlassContrast === 'dark'
+        ? '#09090b'
+        : '#ffffff';
+    return <Component className="w-5 h-5 transition-colors" style={{ color: iconColor }} />;
   };
 
   const getWindowForApp = (appId: AppId) => {
@@ -199,9 +224,17 @@ export const Dock: React.FC = () => {
         className={dockPositionClasses}
       >
         <div
-          className={`pointer-events-auto flex ${isVertical ? 'flex-col py-3 px-1.5' : 'items-center py-1.5 px-3'} glass-panel-dock rounded-2xl border border-white/[0.12] shadow-2xl gap-2 bg-[#12121a]/85 backdrop-blur-2xl`}
+          className={`pointer-events-auto flex ${
+            isVertical ? 'flex-col py-3 px-1.5' : 'items-center py-1.5 px-3'
+          } ${iconRadiusClass} border shadow-2xl gap-2 transition-all ${
+            effectiveGlassContrast === 'dark'
+              ? 'bg-white/80 border-black/15 text-zinc-900 shadow-slate-400/30'
+              : 'bg-[#12121a]/85 border-white/[0.12] text-white shadow-black/80'
+          }`}
           style={{
-            boxShadow: `0 20px 50px rgba(0, 0, 0, 0.7), 0 0 1px rgba(255, 255, 255, 0.2), 0 0 25px ${accentConfig.glow}`,
+            backdropFilter: `blur(${settings.glassBlur ?? 24}px) saturate(180%)`,
+            WebkitBackdropFilter: `blur(${settings.glassBlur ?? 24}px) saturate(180%)`,
+            boxShadow: `0 20px 50px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.2), 0 0 25px ${accentConfig.glow}`,
           }}
         >
           {/* Top 5 Most Recent Apps + All Currently Open Apps */}
@@ -221,14 +254,18 @@ export const Dock: React.FC = () => {
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.9 }}
-                      className={`absolute ${getTooltipPosition()} px-2.5 py-0.5 rounded-lg bg-[#14141d]/95 backdrop-blur-md border border-[#3f3f46]/60 text-white text-[11px] font-medium whitespace-nowrap shadow-xl pointer-events-none z-50`}
+                      className={`absolute ${getTooltipPosition()} px-2.5 py-0.5 rounded-lg text-[11px] font-medium whitespace-nowrap shadow-xl pointer-events-none z-50 ${
+                        effectiveGlassContrast === 'dark'
+                          ? 'bg-white/95 text-zinc-900 border border-slate-300'
+                          : 'bg-[#14141d]/95 text-white border border-[#3f3f46]/60'
+                      }`}
                     >
                       {app.name}
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                {/* Smooth Unified Hover for all apps - Minimizes if active, Restores if minimized, Opens if closed */}
+                {/* Smooth Unified Hover for all apps */}
                 <motion.button
                   id={`dock-app-${app.id}`}
                   onClick={() => {
@@ -250,14 +287,38 @@ export const Dock: React.FC = () => {
                   whileHover={{ scale: 1.08 }}
                   whileTap={{ scale: 0.94 }}
                   transition={{ type: 'spring', stiffness: 450, damping: 28 }}
-                  className={`relative rounded-xl flex items-center justify-center transition-colors ${iconSizeClasses} ${
-                    active
-                      ? 'bg-[#222232] border shadow-md'
-                      : isMinimized
-                      ? 'bg-[#151522]/80 border border-purple-500/30'
-                      : 'bg-[#181822]/90 hover:bg-[#222230] border border-white/10'
+                  className={`relative ${iconRadiusClass} flex items-center justify-center transition-all ${iconSizeClasses} ${
+                    resolvedIconStyle === 'glassy'
+                      ? effectiveGlassContrast === 'dark'
+                        ? 'border border-black/15 hover:border-black/30'
+                        : 'border border-white/10 hover:border-white/30'
+                      : resolvedIconStyle === 'light'
+                      ? 'bg-white/95 border border-black/10 text-zinc-900 shadow-sm'
+                      : resolvedIconStyle === 'dark'
+                      ? 'bg-[#181822]/90 hover:bg-[#222230] border border-white/10 text-white'
+                      : 'border border-white/20 text-white'
                   }`}
                   style={{
+                    backgroundColor:
+                      resolvedIconStyle === 'glassy'
+                        ? effectiveGlassContrast === 'dark'
+                          ? active
+                            ? 'rgba(0, 0, 0, 0.12)'
+                            : `rgba(255, 255, 255, ${iconGlassOpacity})`
+                          : active
+                          ? 'rgba(255, 255, 255, 0.18)'
+                          : `rgba(24, 24, 36, ${iconGlassOpacity})`
+                        : resolvedIconStyle === 'colored'
+                        ? accentConfig.primary
+                        : undefined,
+                    backdropFilter:
+                      resolvedIconStyle === 'glassy' && iconGlassBlur > 0
+                        ? `blur(${iconGlassBlur}px)`
+                        : undefined,
+                    WebkitBackdropFilter:
+                      resolvedIconStyle === 'glassy' && iconGlassBlur > 0
+                        ? `blur(${iconGlassBlur}px)`
+                        : undefined,
                     borderColor: active ? accentConfig.primary : isMinimized ? `${accentConfig.primary}60` : undefined,
                     boxShadow: active ? `0 0 14px ${accentConfig.primary}60` : undefined,
                   }}
@@ -325,9 +386,46 @@ export const Dock: React.FC = () => {
               whileHover={{ scale: 1.08 }}
               whileTap={{ scale: 0.94 }}
               transition={{ type: 'spring', stiffness: 450, damping: 28 }}
-              className={`rounded-xl flex items-center justify-center bg-[#181822]/90 hover:bg-[#222230] border border-white/10 ${iconSizeClasses}`}
+              className={`relative ${iconRadiusClass} flex items-center justify-center transition-all ${iconSizeClasses} ${
+                resolvedIconStyle === 'glassy'
+                  ? effectiveGlassContrast === 'dark'
+                    ? 'border border-black/15 hover:border-black/30'
+                    : 'border border-white/10 hover:border-white/30'
+                  : resolvedIconStyle === 'light'
+                  ? 'bg-white/95 border border-black/10 text-zinc-900 shadow-sm'
+                  : resolvedIconStyle === 'dark'
+                  ? 'bg-[#181822]/90 hover:bg-[#222230] border border-white/10 text-white'
+                  : 'border border-white/20 text-white'
+              }`}
+              style={{
+                backgroundColor:
+                  resolvedIconStyle === 'glassy'
+                    ? effectiveGlassContrast === 'dark'
+                      ? `rgba(255, 255, 255, ${iconGlassOpacity})`
+                      : `rgba(24, 24, 36, ${iconGlassOpacity})`
+                    : resolvedIconStyle === 'colored'
+                    ? accentConfig.primary
+                    : undefined,
+                backdropFilter:
+                  resolvedIconStyle === 'glassy' && iconGlassBlur > 0
+                    ? `blur(${iconGlassBlur}px)`
+                    : undefined,
+                WebkitBackdropFilter:
+                  resolvedIconStyle === 'glassy' && iconGlassBlur > 0
+                    ? `blur(${iconGlassBlur}px)`
+                    : undefined,
+              }}
+              title="Spotlight Suche (⌘ Leertaste)"
             >
-              <Search className="w-4 h-4 text-purple-300" style={{ color: accentConfig.text }} />
+              <Search
+                className="w-4 h-4 transition-colors"
+                style={{
+                  color:
+                    resolvedIconStyle === 'light' || (resolvedIconStyle === 'glassy' && effectiveGlassContrast === 'dark')
+                      ? '#0f172a'
+                      : accentConfig.text,
+                }}
+              />
             </motion.button>
             <div className="h-1 mt-0.5" />
           </div>

@@ -165,6 +165,8 @@ const DesktopContent: React.FC = () => {
     isSetupCompleted,
     snapPreview: windowSnapPreview,
     effectiveTheme,
+    effectiveGlassContrast,
+    isLight,
   } = useOS();
 
   const [selectedQuickApp, setSelectedQuickApp] = useState<{
@@ -210,6 +212,21 @@ const DesktopContent: React.FC = () => {
       isPreinstalled: false,
     })),
   ];
+
+  // Resolve active Icon Appearance
+  const resolvedIconStyle = React.useMemo(() => {
+    if (settings.iconStyle && settings.iconStyle !== 'auto') {
+      return settings.iconStyle;
+    }
+    if (effectiveTheme === 'glassy') return 'glassy';
+    if (effectiveTheme === 'light') return 'light';
+    return 'glassy';
+  }, [settings.iconStyle, effectiveTheme]);
+
+  const iconGlassOpacity = (settings.iconGlassOpacity ?? 55) / 100;
+  const iconGlassBlur = settings.iconGlassBlur ?? 20;
+  const iconRadiusClass = settings.iconRadius || 'rounded-2xl';
+  const iconGlowEnabled = settings.iconGlow ?? true;
 
   // Global Keyboard Shortcuts (Cmd+Space / Ctrl+Space for Spotlight, Cmd+L for Lock)
   useEffect(() => {
@@ -295,8 +312,8 @@ const DesktopContent: React.FC = () => {
   return (
     <div
       id="obsidian-os-root"
-      className={`relative w-screen h-screen overflow-hidden select-none font-sans theme-${effectiveTheme} ${
-        effectiveTheme === 'light' ? 'text-zinc-800' : 'text-white'
+      className={`relative w-screen h-screen overflow-hidden select-none font-sans theme-${effectiveTheme} glass-contrast-${effectiveGlassContrast} ${
+        effectiveGlassContrast === 'dark' ? 'text-zinc-900' : 'text-white'
       }`}
       style={{
         filter: `${settings.brightness && settings.brightness !== 100 ? `brightness(${settings.brightness}%) ` : ''}${
@@ -435,22 +452,71 @@ const DesktopContent: React.FC = () => {
                   : 'hover:scale-105 hover:bg-white/[0.08]'
               }`}
             >
-              {/* Desktop App Icon Box - Lockscreen Frosted Glass Aesthetic */}
+              {/* Desktop App Icon Box - Customizable Aesthetic */}
               <div
-                className={`${iconBoxClass} rounded-2xl flex items-center justify-center shadow-2xl border border-white/20 group-hover:border-purple-400/60 transition-all bg-black/40 backdrop-blur-2xl`}
+                className={`${iconBoxClass} ${iconRadiusClass} flex items-center justify-center transition-all ${
+                  resolvedIconStyle === 'glassy'
+                    ? effectiveGlassContrast === 'dark'
+                      ? 'border border-black/15 group-hover:border-black/30'
+                      : 'border border-white/20 group-hover:border-white/40'
+                    : resolvedIconStyle === 'light'
+                    ? 'bg-white/95 border border-black/10 text-zinc-900 shadow-md'
+                    : resolvedIconStyle === 'dark'
+                    ? 'bg-[#12121a]/95 border border-white/10 text-white shadow-xl'
+                    : 'border border-white/20 text-white shadow-xl'
+                }`}
                 style={{
-                  boxShadow: `0 12px 30px rgba(0,0,0,0.6), 0 0 18px ${accentConfig.glow}`,
+                  backgroundColor:
+                    resolvedIconStyle === 'glassy'
+                      ? effectiveGlassContrast === 'dark'
+                        ? `rgba(255, 255, 255, ${iconGlassOpacity})`
+                        : `rgba(18, 18, 26, ${iconGlassOpacity})`
+                      : resolvedIconStyle === 'colored'
+                      ? accentConfig.primary
+                      : undefined,
+                  backdropFilter:
+                    resolvedIconStyle === 'glassy' && iconGlassBlur > 0
+                      ? `blur(${iconGlassBlur}px)`
+                      : undefined,
+                  WebkitBackdropFilter:
+                    resolvedIconStyle === 'glassy' && iconGlassBlur > 0
+                      ? `blur(${iconGlassBlur}px)`
+                      : undefined,
+                  boxShadow: iconGlowEnabled
+                    ? `0 12px 30px rgba(0,0,0,0.5), 0 0 18px ${accentConfig.glow}`
+                    : '0 8px 24px rgba(0,0,0,0.4)',
                 }}
               >
                 <IconComp
-                  className={`${iconSvgClass} text-zinc-100 group-hover:text-white transition-colors drop-shadow`}
-                  style={{ color: accentConfig.text }}
+                  className={`${iconSvgClass} transition-colors drop-shadow ${
+                    resolvedIconStyle === 'light'
+                      ? 'text-zinc-800 group-hover:text-black'
+                      : resolvedIconStyle === 'dark' || resolvedIconStyle === 'colored'
+                      ? 'text-white'
+                      : effectiveGlassContrast === 'dark'
+                      ? 'text-zinc-900 group-hover:text-black'
+                      : 'text-zinc-100 group-hover:text-white'
+                  }`}
+                  style={{
+                    color:
+                      resolvedIconStyle === 'light'
+                        ? accentConfig.primary
+                        : resolvedIconStyle === 'colored'
+                        ? '#ffffff'
+                        : accentConfig.text,
+                  }}
                 />
               </div>
 
-              {/* App Label with shadow */}
+              {/* App Label with Auto-Contrast Shadow & Color */}
               {settings.desktopShowIconLabels !== false && (
-                <span className="mt-1 text-[11px] font-medium text-white/90 group-hover:text-white text-center leading-tight truncate w-full drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                <span
+                  className={`mt-1 text-[11px] font-medium text-center leading-tight truncate w-full transition-colors ${
+                    effectiveGlassContrast === 'dark'
+                      ? 'text-zinc-900 group-hover:text-black drop-shadow-[0_1px_3px_rgba(255,255,255,0.9)] font-semibold'
+                      : 'text-white/95 group-hover:text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.95)]'
+                  }`}
+                >
                   {app.name}
                 </span>
               )}

@@ -144,7 +144,8 @@ function interpretWmoCode(code: number, isDay = true): { description: string; ty
 }
 
 export const WeatherApp: React.FC = () => {
-  const { sounds, accentConfig, addNotification } = useOS();
+  const { sounds, accentConfig, addNotification, isLight, effectiveGlassContrast } = useOS();
+  const isLightMode = isLight || effectiveGlassContrast === 'dark';
 
   const [currentCity, setCurrentCity] = useState<GeoLocationResult>(() => {
     try {
@@ -406,14 +407,23 @@ export const WeatherApp: React.FC = () => {
   const conditionInfo = weather ? interpretWmoCode(weather.weatherCode, weather.isDay) : null;
 
   return (
-    <div id="weather-app-root" className="flex flex-col h-full w-full bg-[#09090e] text-[#f4f4f5] select-none overflow-y-auto font-sans">
+    <div
+      id="weather-app-root"
+      className={`flex flex-col h-full w-full select-none overflow-y-auto font-sans transition-colors ${
+        isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#09090e] text-[#f4f4f5]'
+      }`}
+    >
       {/* Top Search & Controls Bar */}
-      <div className="p-4 border-b border-[#27272a]/60 bg-[#101018] shrink-0">
+      <div
+        className={`p-4 border-b shrink-0 transition-colors ${
+          isLightMode ? 'bg-white border-slate-200' : 'bg-[#101018] border-[#27272a]/60'
+        }`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* Live Search Input with Open-Meteo Geocoding */}
           <div ref={searchContainerRef} className="relative flex-1 min-w-[220px] max-w-md">
             <div className="relative flex items-center">
-              <Search className="w-4 h-4 text-zinc-400 absolute left-3 pointer-events-none" />
+              <Search className={`w-4 h-4 absolute left-3 pointer-events-none ${isLightMode ? 'text-slate-400' : 'text-zinc-400'}`} />
               <input
                 type="text"
                 placeholder="Weltweite Stadt suchen (z.B. Hamburg, Rom)..."
@@ -422,11 +432,15 @@ export const WeatherApp: React.FC = () => {
                 onFocus={() => {
                   if (searchResults.length > 0) setShowSearchDropdown(true);
                 }}
-                className="w-full bg-[#181824] text-xs text-white placeholder-zinc-500 pl-9 pr-8 py-2 rounded-xl border border-white/10 focus:border-purple-500/60 focus:outline-none transition-colors"
+                className={`w-full text-xs pl-9 pr-8 py-2 rounded-xl border outline-none transition-colors ${
+                  isLightMode
+                    ? 'bg-slate-100 text-slate-900 placeholder-slate-400 border-slate-300 focus:border-purple-500'
+                    : 'bg-[#181824] text-white placeholder-zinc-500 border-white/10 focus:border-purple-500/60'
+                }`}
               />
               {isSearching && (
                 <div className="absolute right-3">
-                  <RefreshCw className="w-3.5 h-3.5 text-purple-400 animate-spin" />
+                  <RefreshCw className="w-3.5 h-3.5 text-purple-500 animate-spin" />
                 </div>
               )}
             </div>
@@ -438,23 +452,27 @@ export const WeatherApp: React.FC = () => {
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
-                  className="absolute top-full mt-1.5 left-0 right-0 z-50 bg-[#161622] border border-white/15 rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl"
+                  className={`absolute top-full mt-1.5 left-0 right-0 z-50 border rounded-2xl shadow-2xl overflow-hidden backdrop-blur-xl ${
+                    isLightMode ? 'bg-white/95 border-slate-200' : 'bg-[#161622] border-white/15'
+                  }`}
                 >
                   <div className="p-1.5 space-y-1">
                     {searchResults.map((res) => (
                       <div
                         key={res.id}
                         onClick={() => handleSelectCity(res)}
-                        className="p-2.5 rounded-xl hover:bg-white/10 cursor-pointer flex items-center justify-between text-xs transition-colors"
+                        className={`p-2.5 rounded-xl cursor-pointer flex items-center justify-between text-xs transition-colors ${
+                          isLightMode ? 'hover:bg-slate-100 text-slate-900' : 'hover:bg-white/10 text-white'
+                        }`}
                       >
                         <div className="flex items-center gap-2">
-                          <MapPin className="w-3.5 h-3.5 text-purple-400 shrink-0" />
-                          <span className="font-semibold text-white">{res.name}</span>
-                          <span className="text-zinc-400 text-[11px]">
+                          <MapPin className="w-3.5 h-3.5 text-purple-500 shrink-0" />
+                          <span className="font-semibold">{res.name}</span>
+                          <span className={`text-[11px] ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>
                             {res.admin1 ? `${res.admin1}, ` : ''}{res.country}
                           </span>
                         </div>
-                        <span className="text-[10px] text-zinc-500 font-mono">
+                        <span className={`text-[10px] font-mono ${isLightMode ? 'text-slate-400' : 'text-zinc-500'}`}>
                           {res.latitude.toFixed(2)}°, {res.longitude.toFixed(2)}°
                         </span>
                       </div>
@@ -469,10 +487,14 @@ export const WeatherApp: React.FC = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={handleUseGeolocation}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/15 text-zinc-300 hover:text-white border border-white/5 transition-all flex items-center gap-1.5 text-xs font-medium"
+              className={`p-2 rounded-xl border transition-all flex items-center gap-1.5 text-xs font-medium ${
+                isLightMode
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                  : 'bg-white/5 hover:bg-white/15 text-zinc-300 hover:text-white border-white/5'
+              }`}
               title="Aktueller Standort via GPS"
             >
-              <Navigation className="w-3.5 h-3.5 text-emerald-400" />
+              <Navigation className="w-3.5 h-3.5 text-emerald-500" />
               <span className="hidden sm:inline">GPS</span>
             </button>
 
@@ -482,21 +504,26 @@ export const WeatherApp: React.FC = () => {
                 fetchWeather(currentCity);
               }}
               disabled={isLoading}
-              className="p-2 rounded-xl bg-white/5 hover:bg-white/15 text-zinc-300 hover:text-white border border-white/5 transition-all flex items-center gap-1.5 text-xs font-medium"
+              className={`p-2 rounded-xl border transition-all flex items-center gap-1.5 text-xs font-medium ${
+                isLightMode
+                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-200'
+                  : 'bg-white/5 hover:bg-white/15 text-zinc-300 hover:text-white border-white/5'
+              }`}
               title="Wetterdaten neu laden"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-purple-400' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-purple-500' : ''}`} />
               <span className="hidden sm:inline">Aktualisieren</span>
             </button>
           </div>
         </div>
 
         {/* Saved Cities Quick Badges */}
-        <div className="flex items-center gap-2 overflow-x-auto pt-3 no-scrollbar text-xs">
+        <motion.div layout className="flex items-center gap-2 overflow-x-auto pt-3 no-scrollbar text-xs">
           {savedCities.map((c) => {
             const isSelected = c.name === currentCity.name;
             return (
-              <button
+              <motion.button
+                layout
                 key={c.name + c.latitude}
                 onClick={() => {
                   sounds.playClick();
@@ -504,7 +531,11 @@ export const WeatherApp: React.FC = () => {
                 }}
                 className={`group px-3 py-1.5 rounded-xl font-medium flex items-center gap-1.5 shrink-0 transition-all border ${
                   isSelected
-                    ? 'bg-purple-500/20 border-purple-500/50 text-white shadow-sm'
+                    ? isLightMode
+                      ? 'bg-purple-100 border-purple-400 text-purple-900 shadow-xs'
+                      : 'bg-purple-500/20 border-purple-500/50 text-white shadow-sm'
+                    : isLightMode
+                    ? 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
                     : 'bg-[#151520] border-white/5 text-zinc-400 hover:text-zinc-200 hover:bg-white/5'
                 }`}
               >
@@ -512,27 +543,27 @@ export const WeatherApp: React.FC = () => {
                 {savedCities.length > 1 && (
                   <span
                     onClick={(e) => handleRemoveCity(e, c.id)}
-                    className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity"
+                    className="p-0.5 rounded opacity-0 group-hover:opacity-100 hover:text-red-500 transition-opacity"
                     title="Entfernen"
                   >
                     <Trash2 className="w-2.5 h-2.5" />
                   </span>
                 )}
-              </button>
+              </motion.button>
             );
           })}
-        </div>
+        </motion.div>
       </div>
 
       {/* Main Weather Content */}
-      <div className="flex-1 p-5 space-y-6 max-w-5xl mx-auto w-full">
+      <motion.div layout className="flex-1 p-5 space-y-6 max-w-5xl mx-auto w-full">
         {error ? (
           <div className="p-8 text-center bg-red-500/10 border border-red-500/20 rounded-3xl space-y-3">
-            <AlertCircle className="w-10 h-10 text-red-400 mx-auto" />
-            <div className="text-sm font-semibold text-red-200">{error}</div>
+            <AlertCircle className="w-10 h-10 text-red-500 mx-auto" />
+            <div className="text-sm font-semibold text-red-600 dark:text-red-200">{error}</div>
             <button
               onClick={() => fetchWeather(currentCity)}
-              className="px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-white text-xs font-semibold"
+              className="px-4 py-2 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-900 dark:text-white text-xs font-semibold"
             >
               Erneut versuchen
             </button>
@@ -540,7 +571,15 @@ export const WeatherApp: React.FC = () => {
         ) : weather ? (
           <>
             {/* Primary Hero Weather Card */}
-            <div className="relative overflow-hidden rounded-3xl p-6 sm:p-8 border border-white/10 bg-gradient-to-br from-[#161626] to-[#0f0f18] shadow-2xl">
+            <motion.div
+              layout
+              layoutId="hero-weather-card"
+              className={`relative overflow-hidden rounded-3xl p-6 sm:p-8 border shadow-xl transition-colors ${
+                isLightMode
+                  ? 'bg-gradient-to-br from-white via-slate-50 to-purple-50/30 border-slate-200 shadow-slate-200/50'
+                  : 'bg-gradient-to-br from-[#161626] to-[#0f0f18] border-white/10 shadow-2xl'
+              }`}
+            >
               {/* Subtle background ambient glow */}
               <div
                 className="absolute -top-24 -right-24 w-72 h-72 rounded-full blur-3xl pointer-events-none opacity-20"
@@ -549,22 +588,22 @@ export const WeatherApp: React.FC = () => {
 
               <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
                 <div>
-                  <div className="flex items-center gap-2 text-zinc-400 text-xs font-semibold uppercase tracking-wider mb-1">
-                    <MapPin className="w-3.5 h-3.5 text-purple-400" />
-                    <span>{weather.city}</span>
+                  <div className={`flex items-center gap-2 text-xs font-semibold uppercase tracking-wider mb-1 ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>
+                    <MapPin className="w-3.5 h-3.5 text-purple-500" />
+                    <span className={isLightMode ? 'text-slate-800' : 'text-zinc-300'}>{weather.city}</span>
                     <span>•</span>
-                    <span className="text-zinc-500">{weather.country}</span>
+                    <span className={isLightMode ? 'text-slate-400' : 'text-zinc-500'}>{weather.country}</span>
                   </div>
 
                   <div className="flex items-baseline gap-4 mt-2">
-                    <span className="text-5xl sm:text-7xl font-extrabold tracking-tight text-white font-sans">
+                    <span className={`text-5xl sm:text-7xl font-extrabold tracking-tight font-sans ${isLightMode ? 'text-slate-900' : 'text-white'}`}>
                       {weather.temp}°
                     </span>
                     <div className="space-y-1">
-                      <div className="text-sm font-medium text-zinc-300">
+                      <div className={`text-sm font-medium ${isLightMode ? 'text-slate-700' : 'text-zinc-300'}`}>
                         Gefühlt wie {weather.feelsLike}°
                       </div>
-                      <div className="text-xs text-zinc-400">
+                      <div className={`text-xs ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>
                         Max {weather.daily[0]?.tempMax ?? weather.temp}° / Min{' '}
                         {weather.daily[0]?.tempMin ?? weather.temp}°
                       </div>
@@ -573,7 +612,7 @@ export const WeatherApp: React.FC = () => {
 
                   <div className="flex items-center gap-2 mt-4">
                     {conditionInfo && renderWeatherIcon(conditionInfo.type, 'w-6 h-6')}
-                    <span className="text-base font-semibold text-zinc-200">
+                    <span className={`text-base font-semibold ${isLightMode ? 'text-slate-800' : 'text-zinc-200'}`}>
                       {conditionInfo?.description}
                     </span>
                   </div>
@@ -581,89 +620,106 @@ export const WeatherApp: React.FC = () => {
 
                 {/* API Status Badge & Last Updated */}
                 <div className="sm:text-right space-y-2">
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-400 font-medium">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                     <span>Live Open-Meteo API</span>
                   </div>
-                  <div className="text-[11px] text-zinc-500">
+                  <div className={`text-[11px] ${isLightMode ? 'text-slate-400' : 'text-zinc-500'}`}>
                     Stand: {weather.lastUpdated} Uhr
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* 24-Hour Hourly Forecast Carousel */}
             <div className="space-y-3">
-              <div className="flex items-center justify-between text-xs font-bold text-zinc-300">
+              <div className={`flex items-center justify-between text-xs font-bold ${isLightMode ? 'text-slate-800' : 'text-zinc-300'}`}>
                 <span>Stündliche Vorhersage (24h)</span>
-                <span className="text-[11px] text-zinc-500">Echtzeit-Meteo</span>
+                <span className={`text-[11px] ${isLightMode ? 'text-slate-400' : 'text-zinc-500'}`}>Echtzeit-Meteo</span>
               </div>
 
-              <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+              <motion.div layout className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
                 {weather.hourly.map((hour, idx) => {
                   const hourCond = interpretWmoCode(hour.weatherCode, hour.isDay);
                   return (
-                    <div
+                    <motion.div
+                      layout
                       key={hour.time + idx}
-                      className="flex flex-col items-center justify-between p-3 min-w-[72px] rounded-2xl bg-[#13131c] border border-white/5 hover:border-white/20 transition-all shrink-0 space-y-2"
+                      className={`flex flex-col items-center justify-between p-3 min-w-[72px] rounded-2xl border transition-all shrink-0 space-y-2 ${
+                        isLightMode
+                          ? 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
+                          : 'bg-[#13131c] border-white/5 hover:border-white/20'
+                      }`}
                     >
-                      <span className="text-[11px] font-medium text-zinc-400">
+                      <span className={`text-[11px] font-medium ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>
                         {idx === 0 ? 'Jetzt' : hour.hour}
                       </span>
                       {renderWeatherIcon(hourCond.type, 'w-5 h-5')}
-                      <span className="text-sm font-bold text-white">{hour.temp}°</span>
-                    </div>
+                      <span className={`text-sm font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{hour.temp}°</span>
+                    </motion.div>
                   );
                 })}
-              </div>
+              </motion.div>
             </div>
 
             {/* Key Atmospheric Metrics Grid */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-4 rounded-2xl bg-[#12121a] border border-white/5 space-y-1">
-                <div className="flex items-center gap-1.5 text-zinc-400 text-xs">
-                  <Droplets className="w-3.5 h-3.5 text-blue-400" />
+              <div className={`p-4 rounded-2xl border space-y-1 ${
+                isLightMode ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#12121a] border-white/5'
+              }`}>
+                <div className={`flex items-center gap-1.5 text-xs ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  <Droplets className="w-3.5 h-3.5 text-blue-500" />
                   <span>Luftfeuchtigkeit</span>
                 </div>
-                <div className="text-xl font-bold text-white">{weather.humidity}%</div>
-                <div className="text-[10px] text-zinc-500">Taupunkt bei {Math.round(weather.temp - (100 - weather.humidity) / 5)}°C</div>
+                <div className={`text-xl font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{weather.humidity}%</div>
+                <div className={`text-[10px] ${isLightMode ? 'text-slate-400' : 'text-zinc-500'}`}>
+                  Taupunkt bei {Math.round(weather.temp - (100 - weather.humidity) / 5)}°C
+                </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#12121a] border border-white/5 space-y-1">
-                <div className="flex items-center gap-1.5 text-zinc-400 text-xs">
-                  <Wind className="w-3.5 h-3.5 text-cyan-400" />
+              <div className={`p-4 rounded-2xl border space-y-1 ${
+                isLightMode ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#12121a] border-white/5'
+              }`}>
+                <div className={`flex items-center gap-1.5 text-xs ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  <Wind className="w-3.5 h-3.5 text-cyan-500" />
                   <span>Windstärke</span>
                 </div>
-                <div className="text-xl font-bold text-white">{weather.windSpeed} km/h</div>
-                <div className="text-[10px] text-zinc-500">Richtung {weather.windDirection}°</div>
+                <div className={`text-xl font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{weather.windSpeed} km/h</div>
+                <div className={`text-[10px] ${isLightMode ? 'text-slate-400' : 'text-zinc-500'}`}>Richtung {weather.windDirection}°</div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#12121a] border border-white/5 space-y-1">
-                <div className="flex items-center gap-1.5 text-zinc-400 text-xs">
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+              <div className={`p-4 rounded-2xl border space-y-1 ${
+                isLightMode ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#12121a] border-white/5'
+              }`}>
+                <div className={`flex items-center gap-1.5 text-xs ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  <Sun className="w-3.5 h-3.5 text-amber-500" />
                   <span>UV-Index</span>
                 </div>
-                <div className="text-xl font-bold text-white">{weather.uvIndex} / 10</div>
-                <div className="text-[10px] text-zinc-500">
+                <div className={`text-xl font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{weather.uvIndex} / 10</div>
+                <div className={`text-[10px] ${isLightMode ? 'text-slate-400' : 'text-zinc-500'}`}>
                   {weather.uvIndex > 5 ? 'Starke Strahlung' : 'Geringes Risiko'}
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-[#12121a] border border-white/5 space-y-1">
-                <div className="flex items-center gap-1.5 text-zinc-400 text-xs">
-                  <Gauge className="w-3.5 h-3.5 text-purple-400" />
+              <div className={`p-4 rounded-2xl border space-y-1 ${
+                isLightMode ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#12121a] border-white/5'
+              }`}>
+                <div className={`flex items-center gap-1.5 text-xs ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>
+                  <Gauge className="w-3.5 h-3.5 text-purple-500" />
                   <span>Luftdruck</span>
                 </div>
-                <div className="text-xl font-bold text-white">{weather.pressure} hPa</div>
-                <div className="text-[10px] text-zinc-500">Normaldruck</div>
+                <div className={`text-xl font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{weather.pressure} hPa</div>
+                <div className={`text-[10px] ${isLightMode ? 'text-slate-400' : 'text-zinc-500'}`}>Normaldruck</div>
               </div>
             </div>
 
             {/* 7-Day Forecast & Sun Times Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* 7-Day Forecast List */}
-              <div className="md:col-span-2 p-5 rounded-3xl bg-[#12121a] border border-white/5 space-y-3">
-                <span className="text-xs font-bold text-zinc-300">7-Tage Wetterausblick</span>
+              <div className={`md:col-span-2 p-5 rounded-3xl border space-y-3 ${
+                isLightMode ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#12121a] border-white/5'
+              }`}>
+                <span className={`text-xs font-bold ${isLightMode ? 'text-slate-800' : 'text-zinc-300'}`}>7-Tage Wetterausblick</span>
 
                 <div className="space-y-2.5 pt-1">
                   {weather.daily.map((day) => {
@@ -671,25 +727,27 @@ export const WeatherApp: React.FC = () => {
                     return (
                       <div
                         key={day.date}
-                        className="flex items-center justify-between p-2 rounded-xl hover:bg-white/[0.03] transition-colors text-xs"
+                        className={`flex items-center justify-between p-2 rounded-xl transition-colors text-xs ${
+                          isLightMode ? 'hover:bg-slate-100' : 'hover:bg-white/[0.03]'
+                        }`}
                       >
-                        <span className="w-16 font-semibold text-zinc-200">{day.dayName}</span>
+                        <span className={`w-16 font-semibold ${isLightMode ? 'text-slate-800' : 'text-zinc-200'}`}>{day.dayName}</span>
 
                         <div className="flex items-center gap-2 w-36">
                           {renderWeatherIcon(dayCond.type, 'w-4 h-4')}
-                          <span className="text-zinc-400 truncate text-[11px]">{dayCond.description}</span>
+                          <span className={`truncate text-[11px] ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>{dayCond.description}</span>
                         </div>
 
                         <div className="flex items-center gap-3 flex-1 justify-end">
-                          <span className="text-zinc-400 w-8 text-right">{day.tempMin}°</span>
+                          <span className={`w-8 text-right ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>{day.tempMin}°</span>
                           {/* Mini temperature bar */}
-                          <div className="w-20 sm:w-28 h-1.5 rounded-full bg-white/10 overflow-hidden relative">
+                          <div className={`w-20 sm:w-28 h-1.5 rounded-full overflow-hidden relative ${isLightMode ? 'bg-slate-200' : 'bg-white/10'}`}>
                             <div
                               className="h-full rounded-full bg-gradient-to-r from-blue-400 to-amber-400"
                               style={{ width: `${Math.min(100, Math.max(20, (day.tempMax - day.tempMin) * 8))}%` }}
                             />
                           </div>
-                          <span className="font-bold text-white w-8 text-right">{day.tempMax}°</span>
+                          <span className={`font-bold w-8 text-right ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{day.tempMax}°</span>
                         </div>
                       </div>
                     );
@@ -700,35 +758,39 @@ export const WeatherApp: React.FC = () => {
               {/* Sun Position & Precipitation Stats */}
               <div className="flex flex-col gap-4">
                 {/* Sunrise & Sunset */}
-                <div className="p-5 rounded-3xl bg-[#12121a] border border-white/5 space-y-4 flex-1">
-                  <span className="text-xs font-bold text-zinc-300">Sonne & Tageslicht</span>
+                <div className={`p-5 rounded-3xl border space-y-4 flex-1 ${
+                  isLightMode ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#12121a] border-white/5'
+                }`}>
+                  <span className={`text-xs font-bold ${isLightMode ? 'text-slate-800' : 'text-zinc-300'}`}>Sonne & Tageslicht</span>
 
                   <div className="space-y-3 pt-1">
-                    <div className="flex items-center justify-between p-2.5 rounded-2xl bg-white/5">
+                    <div className={`flex items-center justify-between p-2.5 rounded-2xl ${isLightMode ? 'bg-slate-50' : 'bg-white/5'}`}>
                       <div className="flex items-center gap-2">
-                        <Sunrise className="w-4 h-4 text-amber-400" />
-                        <span className="text-xs text-zinc-300">Sonnenaufgang</span>
+                        <Sunrise className="w-4 h-4 text-amber-500" />
+                        <span className={`text-xs ${isLightMode ? 'text-slate-700' : 'text-zinc-300'}`}>Sonnenaufgang</span>
                       </div>
-                      <span className="text-xs font-bold text-white">{weather.sunrise}</span>
+                      <span className={`text-xs font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{weather.sunrise}</span>
                     </div>
 
-                    <div className="flex items-center justify-between p-2.5 rounded-2xl bg-white/5">
+                    <div className={`flex items-center justify-between p-2.5 rounded-2xl ${isLightMode ? 'bg-slate-50' : 'bg-white/5'}`}>
                       <div className="flex items-center gap-2">
-                        <Sunset className="w-4 h-4 text-orange-400" />
-                        <span className="text-xs text-zinc-300">Sonnenuntergang</span>
+                        <Sunset className="w-4 h-4 text-orange-500" />
+                        <span className={`text-xs ${isLightMode ? 'text-slate-700' : 'text-zinc-300'}`}>Sonnenuntergang</span>
                       </div>
-                      <span className="text-xs font-bold text-white">{weather.sunset}</span>
+                      <span className={`text-xs font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{weather.sunset}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Cloud & Precipitation */}
-                <div className="p-5 rounded-3xl bg-[#12121a] border border-white/5 space-y-2">
+                <div className={`p-5 rounded-3xl border space-y-2 ${
+                  isLightMode ? 'bg-white border-slate-200 shadow-xs' : 'bg-[#12121a] border-white/5'
+                }`}>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-zinc-400">Bewölkung</span>
-                    <span className="font-bold text-white">{weather.cloudCover}%</span>
+                    <span className={isLightMode ? 'text-slate-600' : 'text-zinc-400'}>Bewölkung</span>
+                    <span className={`font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>{weather.cloudCover}%</span>
                   </div>
-                  <div className="w-full h-1.5 rounded-full bg-white/10 overflow-hidden">
+                  <div className={`w-full h-1.5 rounded-full overflow-hidden ${isLightMode ? 'bg-slate-200' : 'bg-white/10'}`}>
                     <div
                       className="h-full bg-purple-500 rounded-full"
                       style={{ width: `${weather.cloudCover}%` }}
@@ -739,12 +801,12 @@ export const WeatherApp: React.FC = () => {
             </div>
           </>
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 space-y-3 text-zinc-400">
-            <RefreshCw className="w-8 h-8 animate-spin text-purple-400" />
+          <div className={`flex flex-col items-center justify-center py-20 space-y-3 ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>
+            <RefreshCw className="w-8 h-8 animate-spin text-purple-500" />
             <p className="text-sm">Lade Echtzeit-Wetterdaten...</p>
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 };

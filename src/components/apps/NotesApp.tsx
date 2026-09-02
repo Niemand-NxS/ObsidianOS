@@ -83,7 +83,8 @@ Hier kannst du all deine Gedanken, Dokumentationen und Aufgaben festhalten.
 ];
 
 export const NotesApp: React.FC = () => {
-  const { accentConfig, addNotification, sounds, currentUser } = useOS();
+  const { accentConfig, addNotification, sounds, currentUser, isLight, effectiveTheme, effectiveGlassContrast } = useOS();
+  const isLightMode = isLight || effectiveGlassContrast === 'dark';
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [notes, setNotes] = useState<NoteItem[]>(() => {
@@ -325,24 +326,43 @@ export const NotesApp: React.FC = () => {
   }, [activeNote?.content]);
 
   return (
-    <div id="notes-app-root" className="h-full flex flex-row bg-[#0b0b10] text-zinc-200 select-none overflow-hidden font-sans">
+    <div
+      id="notes-app-root"
+      className={`h-full flex flex-row select-none overflow-hidden font-sans transition-colors ${
+        isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0b0b10] text-zinc-200'
+      }`}
+    >
       {/* Sidebar: Notes List */}
-      <div className="w-72 border-r border-[#27272a]/60 flex flex-col bg-[#111118]/95 shrink-0">
+      <div
+        className={`w-72 border-r flex flex-col shrink-0 transition-colors ${
+          isLightMode ? 'bg-slate-100/90 border-slate-200' : 'border-[#27272a]/60 bg-[#111118]/95'
+        }`}
+      >
         {/* Top Header Controls */}
-        <div className="p-3 border-b border-[#27272a]/50 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-xs font-bold text-zinc-200">
+        <div
+          className={`p-3 border-b flex items-center justify-between gap-2 ${
+            isLightMode ? 'border-slate-200' : 'border-[#27272a]/50'
+          }`}
+        >
+          <div className="flex items-center gap-2 text-xs font-bold">
             <div
-              className="w-6 h-6 rounded-lg flex items-center justify-center bg-purple-500/20 text-purple-400"
+              className="w-6 h-6 rounded-lg flex items-center justify-center text-purple-600 bg-purple-500/20"
               style={{ backgroundColor: `${accentConfig.primary}25`, color: accentConfig.primary }}
             >
               <FileText className="w-3.5 h-3.5" />
             </div>
-            <span>Notizen ({notes.length})</span>
+            <span className={isLightMode ? 'text-slate-900' : 'text-zinc-200'}>
+              Notizen ({notes.length})
+            </span>
           </div>
 
           <button
             onClick={handleCreateNote}
-            className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-white font-medium transition-all flex items-center gap-1.5 text-xs shadow-sm"
+            className={`px-2.5 py-1 rounded-xl font-medium transition-all flex items-center gap-1.5 text-xs shadow-sm ${
+              isLightMode
+                ? 'bg-white hover:bg-slate-200 text-slate-900 border border-slate-300'
+                : 'bg-white/10 hover:bg-white/20 text-white'
+            }`}
             title="Neue Notiz erstellen"
           >
             <Plus className="w-3.5 h-3.5" />
@@ -353,26 +373,34 @@ export const NotesApp: React.FC = () => {
         {/* Search Bar */}
         <div className="p-2.5 pb-2">
           <div className="relative">
-            <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5" />
+            <Search className={`w-3.5 h-3.5 absolute left-3 top-2.5 ${isLightMode ? 'text-slate-400' : 'text-zinc-400'}`} />
             <input
               type="text"
               placeholder="Notizen & Inhalte suchen..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#181824] text-xs text-zinc-100 placeholder-zinc-500 pl-8 pr-3 py-2 rounded-xl border border-white/10 focus:border-purple-500/60 focus:outline-none transition-colors"
+              className={`w-full text-xs pl-8 pr-3 py-2 rounded-xl border focus:outline-none transition-colors ${
+                isLightMode
+                  ? 'bg-white text-slate-900 placeholder-slate-400 border-slate-300 focus:border-purple-500'
+                  : 'bg-[#181824] text-zinc-100 placeholder-zinc-500 border-white/10 focus:border-purple-500/60'
+              }`}
             />
           </div>
         </div>
 
-        {/* Categories Chips */}
+        {/* Categories Chips with FLIP layout */}
         <div className="px-2.5 pb-2 flex gap-1.5 overflow-x-auto text-[11px] no-scrollbar">
           {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setSelectedCategory(cat)}
-              className={`px-2.5 py-1 rounded-lg shrink-0 transition-all font-medium ${
+              className={`px-2.5 py-1 rounded-lg shrink-0 transition-all font-medium relative ${
                 selectedCategory === cat
-                  ? 'bg-white/20 text-white shadow-sm'
+                  ? isLightMode
+                    ? 'bg-white text-slate-900 shadow-sm border border-slate-300'
+                    : 'bg-white/20 text-white shadow-sm'
+                  : isLightMode
+                  ? 'bg-slate-200/60 text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                   : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
               }`}
             >
@@ -381,15 +409,16 @@ export const NotesApp: React.FC = () => {
           ))}
         </div>
 
-        {/* Notes Items List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1.5">
+        {/* Notes Items List with FLIP */}
+        <motion.div layout className="flex-1 overflow-y-auto p-2 space-y-1.5">
           {filteredNotes.length === 0 ? (
-            <div className="p-6 text-center text-xs text-zinc-500 space-y-2">
-              <FileText className="w-8 h-8 mx-auto opacity-30" />
-              <p>Keine Notizen gefunden.</p>
+            <div className="p-6 text-center text-xs space-y-2">
+              <FileText className={`w-8 h-8 mx-auto opacity-30 ${isLightMode ? 'text-slate-400' : 'text-zinc-500'}`} />
+              <p className={isLightMode ? 'text-slate-600' : 'text-zinc-500'}>Keine Notizen gefunden.</p>
               <button
                 onClick={handleCreateNote}
-                className="text-purple-400 hover:underline text-xs"
+                className="text-purple-600 hover:underline text-xs"
+                style={{ color: accentConfig.primary }}
               >
                 Neue Notiz anlegen
               </button>
@@ -398,7 +427,9 @@ export const NotesApp: React.FC = () => {
             filteredNotes.map((note) => {
               const isCurrent = note.id === activeNote?.id;
               return (
-                <div
+                <motion.div
+                  layout
+                  layoutId={`note-card-${note.id}`}
                   key={note.id}
                   onClick={() => {
                     setActiveNoteId(note.id);
@@ -406,16 +437,24 @@ export const NotesApp: React.FC = () => {
                   }}
                   className={`group relative p-3 rounded-2xl cursor-pointer transition-all flex flex-col gap-1.5 border ${
                     isCurrent
-                      ? 'bg-[#1b1b28] border-white/25 shadow-lg'
-                      : 'bg-[#14141d]/70 border-white/5 hover:bg-white/[0.06] hover:border-white/15'
+                      ? isLightMode
+                        ? 'bg-purple-50/90 border-purple-400 ring-1 ring-purple-300 shadow-md text-slate-900'
+                        : 'bg-[#1b1b28] border-white/25 shadow-lg text-white'
+                      : isLightMode
+                      ? 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300 text-slate-800'
+                      : 'bg-[#14141d]/70 border-white/5 hover:bg-white/[0.06] hover:border-white/15 text-zinc-200'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0 flex-1">
                       {note.isPinned && (
-                        <Pin className="w-3 h-3 text-amber-400 fill-amber-400 shrink-0" />
+                        <Pin className="w-3 h-3 text-amber-500 fill-amber-500 shrink-0" />
                       )}
-                      <span className="text-xs font-semibold text-zinc-100 truncate">
+                      <span
+                        className={`text-xs font-semibold truncate ${
+                          isLightMode ? 'text-slate-900' : 'text-zinc-100'
+                        }`}
+                      >
                         {note.title || 'Ohne Titel'}
                       </span>
                     </div>
@@ -424,7 +463,11 @@ export const NotesApp: React.FC = () => {
                       <button
                         onClick={(e) => handleTogglePin(note.id, e)}
                         className={`p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity ${
-                          note.isPinned ? 'text-amber-400 opacity-100' : 'text-zinc-500 hover:text-white'
+                          note.isPinned
+                            ? 'text-amber-500 opacity-100'
+                            : isLightMode
+                            ? 'text-slate-400 hover:text-slate-900'
+                            : 'text-zinc-500 hover:text-white'
                         }`}
                         title={note.isPinned ? 'Loslösen' : 'Anheften'}
                       >
@@ -433,7 +476,11 @@ export const NotesApp: React.FC = () => {
 
                       <button
                         onClick={(e) => handleDeleteNote(note.id, e)}
-                        className="p-1 text-zinc-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity rounded"
+                        className={`p-1 opacity-0 group-hover:opacity-100 transition-opacity rounded ${
+                          isLightMode
+                            ? 'text-slate-400 hover:text-red-600'
+                            : 'text-zinc-500 hover:text-red-400'
+                        }`}
                         title="Löschen"
                       >
                         <Trash2 className="w-3 h-3" />
@@ -441,33 +488,45 @@ export const NotesApp: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
+                  <div
+                    className={`text-[11px] line-clamp-2 leading-relaxed ${
+                      isLightMode ? 'text-slate-600' : 'text-zinc-400'
+                    }`}
+                  >
                     {note.content.replace(/^[#\s\-*]+/gm, '').trim() || 'Leere Notiz...'}
                   </div>
 
-                  <div className="flex items-center justify-between text-[10px] text-zinc-500 pt-0.5">
-                    <span className="px-1.5 py-0.5 rounded bg-white/5 text-zinc-400 font-medium">
+                  <div className="flex items-center justify-between text-[10px] pt-0.5">
+                    <span
+                      className={`px-1.5 py-0.5 rounded font-medium ${
+                        isLightMode ? 'bg-slate-100 text-slate-700' : 'bg-white/5 text-zinc-400'
+                      }`}
+                    >
                       {note.category || 'Allgemein'}
                     </span>
-                    <span>
+                    <span className={isLightMode ? 'text-slate-500' : 'text-zinc-500'}>
                       {new Date(note.updatedAt).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit',
                       })}
                     </span>
                   </div>
-                </div>
+                </motion.div>
               );
             })
           )}
-        </div>
+        </motion.div>
       </div>
 
       {/* Editor & Content Area */}
       {activeNote ? (
-        <div className="flex-1 flex flex-col overflow-hidden bg-[#0c0c12] select-text">
+        <div className={`flex-1 flex flex-col overflow-hidden select-text transition-colors ${isLightMode ? 'bg-white' : 'bg-[#0c0c12]'}`}>
           {/* Editor Header Toolbar */}
-          <div className="h-12 border-b border-[#27272a]/60 px-4 flex items-center justify-between bg-[#12121a] select-none gap-3">
+          <div
+            className={`h-12 border-b px-4 flex items-center justify-between select-none gap-3 transition-colors ${
+              isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-[#12121a] border-[#27272a]/60'
+            }`}
+          >
             {/* Direct Title Input */}
             <div className="flex-1 flex items-center gap-2 min-w-0">
               <input
@@ -475,22 +534,32 @@ export const NotesApp: React.FC = () => {
                 value={activeNote.title}
                 onChange={(e) => handleTitleChange(e.target.value)}
                 placeholder="Titel der Notiz..."
-                className="w-full bg-transparent text-sm sm:text-base font-bold text-white placeholder-zinc-500 focus:outline-none"
+                className={`w-full bg-transparent text-sm sm:text-base font-bold focus:outline-none ${
+                  isLightMode ? 'text-slate-900 placeholder-slate-400' : 'text-white placeholder-zinc-500'
+                }`}
               />
             </div>
 
             {/* Category Selector & Save Indicator */}
             <div className="flex items-center gap-2 shrink-0">
               {/* Category Picker Dropdown */}
-              <div className="flex items-center gap-1 bg-white/5 rounded-xl px-2 py-1 border border-white/10 text-xs">
-                <Tag className="w-3 h-3 text-zinc-400" />
+              <div
+                className={`flex items-center gap-1 rounded-xl px-2 py-1 border text-xs ${
+                  isLightMode ? 'bg-white border-slate-300 text-slate-800' : 'bg-white/5 border-white/10 text-zinc-200'
+                }`}
+              >
+                <Tag className={`w-3 h-3 ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`} />
                 <select
                   value={activeNote.category}
                   onChange={(e) => handleCategoryChange(e.target.value)}
-                  className="bg-transparent text-zinc-200 text-xs focus:outline-none cursor-pointer"
+                  className="bg-transparent text-xs focus:outline-none cursor-pointer"
                 >
                   {DEFAULT_CATEGORIES.map((c) => (
-                    <option key={c} value={c} className="bg-[#181824] text-white">
+                    <option
+                      key={c}
+                      value={c}
+                      className={isLightMode ? 'bg-white text-slate-900' : 'bg-[#181824] text-white'}
+                    >
                       {c}
                     </option>
                   ))}
@@ -502,7 +571,9 @@ export const NotesApp: React.FC = () => {
                 onClick={() => handleTogglePin(activeNote.id)}
                 className={`p-1.5 rounded-xl border transition-all ${
                   activeNote.isPinned
-                    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    ? 'bg-amber-500/20 text-amber-600 border-amber-500/30'
+                    : isLightMode
+                    ? 'bg-white hover:bg-slate-200 text-slate-600 border-slate-300'
                     : 'bg-white/5 hover:bg-white/10 text-zinc-400 border-transparent'
                 }`}
                 title={activeNote.isPinned ? 'Notiz loslösen' : 'Notiz anheften'}
@@ -513,7 +584,11 @@ export const NotesApp: React.FC = () => {
               {/* Export Button */}
               <button
                 onClick={handleExportNote}
-                className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 border border-transparent hover:border-white/10 transition-all"
+                className={`p-1.5 rounded-xl border transition-all ${
+                  isLightMode
+                    ? 'bg-white hover:bg-slate-200 text-slate-700 border-slate-300'
+                    : 'bg-white/5 hover:bg-white/10 text-zinc-300 border-transparent'
+                }`}
                 title="Als .md exportieren"
               >
                 <Download className="w-3.5 h-3.5" />
@@ -527,9 +602,12 @@ export const NotesApp: React.FC = () => {
                 }}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all ${
                   isPreviewMode
-                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/40 shadow-sm'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : isLightMode
+                    ? 'bg-white hover:bg-slate-200 text-slate-800 border border-slate-300'
                     : 'bg-white/10 hover:bg-white/15 text-white'
                 }`}
+                style={isPreviewMode ? { backgroundColor: accentConfig.primary } : undefined}
               >
                 {isPreviewMode ? <Edit3 className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                 <span>{isPreviewMode ? 'Editor' : 'Vorschau'}</span>
@@ -539,61 +617,65 @@ export const NotesApp: React.FC = () => {
 
           {/* Quick Markdown Toolbar (When in Edit Mode) */}
           {!isPreviewMode && (
-            <div className="h-9 border-b border-[#27272a]/40 px-4 bg-[#14141e]/70 flex items-center gap-1 select-none overflow-x-auto text-zinc-400">
+            <div
+              className={`h-9 border-b px-4 flex items-center gap-1 select-none overflow-x-auto text-xs ${
+                isLightMode ? 'bg-slate-50 border-slate-200 text-slate-700' : 'bg-[#14141e]/70 border-[#27272a]/40 text-zinc-400'
+              }`}
+            >
               <button
                 onClick={() => insertFormatting('**', '**', 'Fetter Text')}
-                className="p-1 rounded hover:bg-white/10 hover:text-white transition-colors"
+                className={`p-1 rounded transition-colors ${isLightMode ? 'hover:bg-slate-200 hover:text-slate-900' : 'hover:bg-white/10 hover:text-white'}`}
                 title="Fett"
               >
                 <Bold className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => insertFormatting('*', '*', 'Kursiver Text')}
-                className="p-1 rounded hover:bg-white/10 hover:text-white transition-colors"
+                className={`p-1 rounded transition-colors ${isLightMode ? 'hover:bg-slate-200 hover:text-slate-900' : 'hover:bg-white/10 hover:text-white'}`}
                 title="Kursiv"
               >
                 <Italic className="w-3.5 h-3.5" />
               </button>
-              <span className="w-px h-4 bg-white/10 mx-1" />
+              <span className={`w-px h-4 mx-1 ${isLightMode ? 'bg-slate-300' : 'bg-white/10'}`} />
               <button
                 onClick={() => insertFormatting('# ', '', 'Überschrift 1')}
-                className="p-1 rounded hover:bg-white/10 hover:text-white transition-colors"
+                className={`p-1 rounded transition-colors ${isLightMode ? 'hover:bg-slate-200 hover:text-slate-900' : 'hover:bg-white/10 hover:text-white'}`}
                 title="Große Überschrift"
               >
                 <Heading className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => insertFormatting('### ', '', 'Unterüberschrift')}
-                className="px-1.5 py-0.5 rounded text-[11px] font-bold hover:bg-white/10 hover:text-white transition-colors"
+                className={`px-1.5 py-0.5 rounded text-[11px] font-bold transition-colors ${isLightMode ? 'hover:bg-slate-200 hover:text-slate-900' : 'hover:bg-white/10 hover:text-white'}`}
                 title="Kleine Überschrift"
               >
                 H3
               </button>
-              <span className="w-px h-4 bg-white/10 mx-1" />
+              <span className={`w-px h-4 mx-1 ${isLightMode ? 'bg-slate-300' : 'bg-white/10'}`} />
               <button
                 onClick={() => insertFormatting('- ', '', 'Listenpunkt')}
-                className="p-1 rounded hover:bg-white/10 hover:text-white transition-colors"
+                className={`p-1 rounded transition-colors ${isLightMode ? 'hover:bg-slate-200 hover:text-slate-900' : 'hover:bg-white/10 hover:text-white'}`}
                 title="Aufzählung"
               >
                 <List className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => insertFormatting('- [ ] ', '', 'Neue Aufgabe')}
-                className="p-1 rounded hover:bg-white/10 hover:text-white transition-colors"
+                className={`p-1 rounded transition-colors ${isLightMode ? 'hover:bg-slate-200 hover:text-slate-900' : 'hover:bg-white/10 hover:text-white'}`}
                 title="Aufgabe / Checkbox"
               >
                 <CheckSquare className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => insertFormatting('> ', '', 'Zitat')}
-                className="p-1 rounded hover:bg-white/10 hover:text-white transition-colors"
+                className={`p-1 rounded transition-colors ${isLightMode ? 'hover:bg-slate-200 hover:text-slate-900' : 'hover:bg-white/10 hover:text-white'}`}
                 title="Zitat"
               >
                 <Quote className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => insertFormatting('`', '`', 'code')}
-                className="p-1 rounded hover:bg-white/10 hover:text-white transition-colors"
+                className={`p-1 rounded transition-colors ${isLightMode ? 'hover:bg-slate-200 hover:text-slate-900' : 'hover:bg-white/10 hover:text-white'}`}
                 title="Code"
               >
                 <Code className="w-3.5 h-3.5" />
@@ -601,7 +683,7 @@ export const NotesApp: React.FC = () => {
 
               <div className="flex-1" />
 
-              <div className="flex items-center gap-1 text-[10px] text-emerald-400 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+              <div className="flex items-center gap-1 text-[10px] text-emerald-500 font-medium bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
                 <Check className="w-2.5 h-2.5" />
                 <span>{isSaved ? 'Gespeichert' : 'Speichere...'}</span>
               </div>
@@ -609,57 +691,78 @@ export const NotesApp: React.FC = () => {
           )}
 
           {/* Main Text Content Area */}
-          <div className="flex-1 overflow-y-auto p-5 sm:p-7 flex flex-col bg-[#0c0c12]">
+          <div className={`flex-1 overflow-y-auto p-5 sm:p-7 flex flex-col ${isLightMode ? 'bg-white' : 'bg-[#0c0c12]'}`}>
             {isPreviewMode ? (
-              <div className="max-w-3xl w-full mx-auto text-zinc-200 text-sm leading-relaxed space-y-4 select-text">
+              <div className={`max-w-3xl w-full mx-auto text-sm leading-relaxed space-y-4 select-text ${isLightMode ? 'text-slate-800' : 'text-zinc-200'}`}>
                 {activeNote.content.split('\n').map((line, idx) => {
                   if (line.startsWith('# ')) {
                     return (
-                      <h1 key={idx} className="text-2xl font-bold text-white border-b border-white/15 pb-2 mt-2">
+                      <h1
+                        key={idx}
+                        className={`text-2xl font-bold border-b pb-2 mt-2 ${
+                          isLightMode ? 'text-slate-900 border-slate-200' : 'text-white border-white/15'
+                        }`}
+                      >
                         {line.replace('# ', '')}
                       </h1>
                     );
                   }
                   if (line.startsWith('## ')) {
                     return (
-                      <h2 key={idx} className="text-xl font-bold text-white mt-4 pb-1 border-b border-white/10">
+                      <h2
+                        key={idx}
+                        className={`text-xl font-bold mt-4 pb-1 border-b ${
+                          isLightMode ? 'text-slate-900 border-slate-200' : 'text-white border-white/10'
+                        }`}
+                      >
                         {line.replace('## ', '')}
                       </h2>
                     );
                   }
                   if (line.startsWith('### ')) {
                     return (
-                      <h3 key={idx} className="text-base font-semibold text-purple-300 mt-3">
+                      <h3
+                        key={idx}
+                        className="text-base font-semibold mt-3"
+                        style={{ color: accentConfig.primary }}
+                      >
                         {line.replace('### ', '')}
                       </h3>
                     );
                   }
                   if (line.startsWith('- [x] ') || line.startsWith('- [X] ')) {
                     return (
-                      <div key={idx} className="flex items-center gap-2 text-zinc-400 line-through">
-                        <CheckSquare className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <div key={idx} className={`flex items-center gap-2 line-through ${isLightMode ? 'text-slate-400' : 'text-zinc-400'}`}>
+                        <CheckSquare className="w-4 h-4 text-emerald-500 shrink-0" />
                         <span>{line.replace(/- \[[xX]\] /, '')}</span>
                       </div>
                     );
                   }
                   if (line.startsWith('- [ ] ')) {
                     return (
-                      <div key={idx} className="flex items-center gap-2 text-zinc-200">
-                        <div className="w-4 h-4 rounded border border-zinc-500 shrink-0" />
+                      <div key={idx} className="flex items-center gap-2">
+                        <div className={`w-4 h-4 rounded border shrink-0 ${isLightMode ? 'border-slate-400' : 'border-zinc-500'}`} />
                         <span>{line.replace(/- \[ \] /, '')}</span>
                       </div>
                     );
                   }
                   if (line.startsWith('- ') || line.startsWith('* ')) {
                     return (
-                      <li key={idx} className="ml-4 list-disc text-zinc-300">
+                      <li key={idx} className="ml-4 list-disc">
                         {line.replace(/^[-*]\s+/, '')}
                       </li>
                     );
                   }
                   if (line.startsWith('> ')) {
                     return (
-                      <blockquote key={idx} className="border-l-4 border-purple-500/60 pl-3 py-1 text-zinc-400 italic bg-white/[0.02] rounded-r">
+                      <blockquote
+                        key={idx}
+                        className={`border-l-4 pl-3 py-1 italic rounded-r ${
+                          isLightMode
+                            ? 'border-purple-500 text-slate-600 bg-slate-50'
+                            : 'border-purple-500/60 text-zinc-400 bg-white/[0.02]'
+                        }`}
+                      >
                         {line.replace('> ', '')}
                       </blockquote>
                     );
@@ -668,7 +771,7 @@ export const NotesApp: React.FC = () => {
                     return <div key={idx} className="h-3" />;
                   }
                   return (
-                    <p key={idx} className="text-zinc-300 leading-relaxed">
+                    <p key={idx} className="leading-relaxed">
                       {line}
                     </p>
                   );
@@ -680,7 +783,9 @@ export const NotesApp: React.FC = () => {
                 value={activeNote.content}
                 onChange={(e) => handleContentChange(e.target.value)}
                 placeholder="Schreibe deine Gedanken hier auf..."
-                className="w-full max-w-3xl mx-auto flex-1 bg-transparent text-zinc-100 text-sm sm:text-base leading-relaxed font-sans resize-none outline-none focus:ring-0"
+                className={`w-full max-w-3xl mx-auto flex-1 bg-transparent text-sm sm:text-base leading-relaxed font-sans resize-none outline-none focus:ring-0 ${
+                  isLightMode ? 'text-slate-900 placeholder-slate-400' : 'text-zinc-100 placeholder-zinc-500'
+                }`}
                 spellCheck={true}
                 autoFocus
               />
@@ -688,14 +793,18 @@ export const NotesApp: React.FC = () => {
           </div>
 
           {/* Footer Stats Bar */}
-          <div className="h-7 border-t border-[#27272a]/50 px-4 bg-[#0f0f16] flex items-center justify-between text-[11px] text-zinc-500 select-none">
+          <div
+            className={`h-7 border-t px-4 flex items-center justify-between text-[11px] select-none ${
+              isLightMode ? 'bg-slate-100 border-slate-200 text-slate-600' : 'bg-[#0f0f16] border-[#27272a]/50 text-zinc-500'
+            }`}
+          >
             <div className="flex items-center gap-4">
               <span>{wordCount} Wörter</span>
               <span>•</span>
               <span>{charCount} Zeichen</span>
             </div>
             <div className="flex items-center gap-2">
-              <Clock className="w-3 h-3 text-zinc-600" />
+              <Clock className={`w-3 h-3 ${isLightMode ? 'text-slate-400' : 'text-zinc-600'}`} />
               <span>
                 Aktualisiert: {new Date(activeNote.updatedAt).toLocaleDateString()} {new Date(activeNote.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
@@ -703,7 +812,7 @@ export const NotesApp: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex items-center justify-center text-zinc-500 text-sm">
+        <div className={`flex-1 flex items-center justify-center text-sm ${isLightMode ? 'text-slate-500' : 'text-zinc-500'}`}>
           Keine Notiz ausgewählt.
         </div>
       )}

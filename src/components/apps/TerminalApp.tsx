@@ -627,7 +627,8 @@ export const TerminalApp: React.FC = () => {
 
   return (
     <div
-      className={`h-full flex flex-col p-3 font-mono text-xs overflow-hidden select-text ${
+      id="terminal-app-root"
+      className={`terminal-theme h-full flex flex-col p-3 font-mono text-xs overflow-hidden select-text ${
         matrixActive ? 'bg-[#020d06] text-emerald-400' : 'bg-[#0a0a0f] text-zinc-200'
       }`}
       onClick={() => inputRef.current?.focus()}

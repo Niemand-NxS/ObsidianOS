@@ -6,7 +6,7 @@ import { MapPin, RefreshCw, Sliders, X, GripHorizontal, Sparkles, Clock, Palette
 import { motion, AnimatePresence } from 'motion/react';
 
 export const DesktopGlance: React.FC = () => {
-  const { settings, updateSettings, accentConfig, sounds, openApp, addNotification } = useOS();
+  const { settings, updateSettings, accentConfig, sounds, openApp, addNotification, effectiveGlassContrast, isLight } = useOS();
   const [time, setTime] = useState('');
   const [secondsStr, setSecondsStr] = useState('');
   const [dateStr, setDateStr] = useState('');
@@ -155,18 +155,26 @@ export const DesktopGlance: React.FC = () => {
     >
       <div
         id="desktop-glance-widget"
-        className="group relative w-72 px-4 py-3.5 rounded-2xl bg-[#0e0e14]/80 backdrop-blur-2xl border border-white/[0.14] shadow-2xl transition-all duration-200 hover:border-white/30 hover:bg-[#0e0e14]/92"
+        className={`group relative w-72 px-4 py-3.5 rounded-2xl backdrop-blur-2xl shadow-2xl transition-all duration-200 ${
+          effectiveGlassContrast === 'dark'
+            ? 'bg-white/75 border border-black/15 text-zinc-900 shadow-slate-300/40 hover:bg-white/85 hover:border-black/30'
+            : 'bg-[#0e0e14]/80 border border-white/[0.14] text-white shadow-2xl hover:border-white/30 hover:bg-[#0e0e14]/92'
+        }`}
         style={{
-          boxShadow: `0 20px 45px rgba(0,0,0,0.65), 0 0 25px ${accentConfig.glow}25`,
+          boxShadow: `0 20px 45px rgba(0,0,0,0.4), 0 0 25px ${accentConfig.glow}25`,
         }}
       >
         {/* Floating Top Control Bar: Grip Handle, Settings, Close/Delete */}
         <div
-          className={`absolute -top-3.5 left-3 right-3 flex items-center justify-between bg-[#161622] border border-white/20 px-2.5 py-0.5 rounded-full shadow-xl transition-all duration-200 ${
+          className={`absolute -top-3.5 left-3 right-3 flex items-center justify-between px-2.5 py-0.5 rounded-full shadow-xl transition-all duration-200 ${
+            effectiveGlassContrast === 'dark'
+              ? 'bg-white/95 border border-black/15 text-zinc-800'
+              : 'bg-[#161622] border border-white/20 text-zinc-400'
+          } ${
             isHovered || isDragging ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1 pointer-events-none'
           }`}
         >
-          <div className="flex items-center gap-1.5 text-[10px] text-zinc-400 font-medium">
+          <div className="flex items-center gap-1.5 text-[10px] font-medium">
             <GripHorizontal className="w-3 h-3 text-purple-400" />
             <span>Widget verschieben</span>
           </div>
@@ -175,14 +183,14 @@ export const DesktopGlance: React.FC = () => {
             <button
               onClick={handleOpenClockSettings}
               title="Uhrzeit-Design & Animationen anpassen"
-              className="p-1 rounded-full hover:bg-white/10 text-zinc-300 hover:text-white transition-colors"
+              className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 transition-colors"
             >
               <Clock className="w-3 h-3 text-purple-400" />
             </button>
             <button
               onClick={handleCloseWidget}
               title="Widget vom Desktop löschen"
-              className="p-1 rounded-full hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition-colors"
+              className="p-1 rounded-full hover:bg-red-500/20 text-zinc-400 hover:text-red-500 transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -199,33 +207,55 @@ export const DesktopGlance: React.FC = () => {
                 initial="initial"
                 animate="animate"
                 exit="exit"
-                className={`text-4xl font-extralight text-white drop-shadow-md leading-none tracking-tight ${fontClass}`}
+                className={`text-4xl font-extralight drop-shadow-md leading-none tracking-tight ${
+                  effectiveGlassContrast === 'dark' ? 'text-zinc-950 font-light' : 'text-white'
+                } ${fontClass}`}
               >
                 {time}
               </motion.span>
             </AnimatePresence>
             {settings.clockShowSeconds && (
-              <span className="text-sm text-zinc-400 font-mono tracking-normal leading-none">
+              <span
+                className={`text-sm font-mono tracking-normal leading-none ${
+                  effectiveGlassContrast === 'dark' ? 'text-zinc-600' : 'text-zinc-400'
+                }`}
+              >
                 {secondsStr}
               </span>
             )}
           </div>
           {settings.clockShowDate !== false && (
-            <span className="text-xs font-medium text-zinc-300 tracking-wide drop-shadow mt-1">
+            <span
+              className={`text-xs font-medium tracking-wide drop-shadow mt-1 ${
+                effectiveGlassContrast === 'dark' ? 'text-zinc-700' : 'text-zinc-300'
+              }`}
+            >
               {dateStr}
             </span>
           )}
         </div>
 
         {/* Photo Meta & Quick Controls */}
-        <div className="mt-3 pt-2.5 border-t border-white/[0.08] flex items-center justify-between gap-2">
+        <div
+          className={`mt-3 pt-2.5 border-t flex items-center justify-between gap-2 ${
+            effectiveGlassContrast === 'dark' ? 'border-black/10' : 'border-white/[0.08]'
+          }`}
+        >
           <div className="flex items-center gap-2 overflow-hidden max-w-[150px]">
             <MapPin className="w-3.5 h-3.5 text-purple-400 shrink-0" />
             <div className="overflow-hidden text-left">
-              <p className="text-[11px] font-semibold text-white truncate drop-shadow">
+              <p
+                className={`text-[11px] font-semibold truncate drop-shadow ${
+                  effectiveGlassContrast === 'dark' ? 'text-zinc-900' : 'text-white'
+                }`}
+              >
                 {settings.desktopCustomPhotoUrl ? 'Eigener Fotohintergrund' : currentPhoto.title}
               </p>
-              <p className="text-[9px] text-zinc-400 truncate">
+              <p
+                className={`text-[9px] truncate ${
+                  effectiveGlassContrast === 'dark' ? 'text-zinc-600' : 'text-zinc-400'
+                }`}
+              >
                 {settings.desktopCustomPhotoUrl ? 'Benutzerdefiniert' : currentPhoto.location}
               </p>
             </div>
@@ -235,14 +265,18 @@ export const DesktopGlance: React.FC = () => {
           <div className="flex items-center gap-1.5">
             <button
               onClick={handleNextWallpaper}
-              className="p-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.15] text-zinc-300 hover:text-white transition-all shadow-sm"
+              className={`p-1.5 rounded-xl transition-all shadow-sm ${
+                effectiveGlassContrast === 'dark'
+                  ? 'bg-black/[0.06] hover:bg-black/[0.12] text-zinc-700 hover:text-black'
+                  : 'bg-white/[0.06] hover:bg-white/[0.15] text-zinc-300 hover:text-white'
+              }`}
               title="Nächstes Foto-Wallpaper"
             >
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
             <button
               onClick={handleOpenClockSettings}
-              className="p-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 hover:text-white transition-all shadow-sm border border-purple-500/30"
+              className="p-1.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 hover:text-purple-600 transition-all shadow-sm border border-purple-500/30"
               title="Uhrzeit & Sperrbildschirm anpassen"
             >
               <Sliders className="w-3.5 h-3.5" />

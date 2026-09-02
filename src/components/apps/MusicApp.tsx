@@ -45,7 +45,8 @@ const CURATED_SEARCHES = [
 ];
 
 export const MusicApp: React.FC = () => {
-  const { accentConfig, addNotification, setNowPlaying } = useOS();
+  const { accentConfig, addNotification, setNowPlaying, isLight, effectiveGlassContrast } = useOS();
+  const isLightMode = isLight || effectiveGlassContrast === 'dark';
   const [searchQuery, setSearchQuery] = useState('Cyberpunk Synthwave');
   const [tracks, setTracks] = useState<AppleMusicTrack[]>([]);
   const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
@@ -282,7 +283,11 @@ export const MusicApp: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#0b0b10] text-zinc-100 select-none overflow-hidden relative">
+    <div
+      className={`h-full flex flex-col select-none overflow-hidden relative transition-colors ${
+        isLightMode ? 'bg-slate-50 text-slate-900' : 'bg-[#0b0b10] text-zinc-100'
+      }`}
+    >
       {/* Hidden Audio Element */}
       <audio
         ref={audioRef}
@@ -298,7 +303,11 @@ export const MusicApp: React.FC = () => {
 
       {/* Official Apple Music Paywall & Status Banner */}
       <div
-        className="px-3.5 py-2 bg-gradient-to-r from-[#170e28] via-[#12121c] to-[#1f0a21] border-b border-purple-500/20 flex items-center justify-between gap-2 shrink-0"
+        className={`px-3.5 py-2 border-b flex items-center justify-between gap-2 shrink-0 transition-colors ${
+          isLightMode
+            ? 'bg-rose-50 border-rose-200 text-rose-900'
+            : 'bg-gradient-to-r from-[#170e28] via-[#12121c] to-[#1f0a21] border-purple-500/20 text-white'
+        }`}
         style={{ borderColor: accentConfig.border }}
       >
         <div className="flex items-center gap-2 overflow-hidden">
@@ -306,8 +315,8 @@ export const MusicApp: React.FC = () => {
             <Music className="w-3 h-3 text-white fill-white" />
           </div>
           <div className="text-xs truncate">
-            <span className="font-semibold text-white">Apple Music Vorschau</span>
-            <span className="text-zinc-400 text-[11px] ml-1.5 hidden sm:inline">
+            <span className={`font-semibold ${isLightMode ? 'text-rose-950' : 'text-white'}`}>Apple Music Vorschau</span>
+            <span className={`text-[11px] ml-1.5 hidden sm:inline ${isLightMode ? 'text-rose-700' : 'text-zinc-400'}`}>
               (30 Sek. Hi-Res Preview aktiv • Für unbegrenzte Vollversionen wird ein Abo benötigt)
             </span>
           </div>
@@ -323,7 +332,11 @@ export const MusicApp: React.FC = () => {
       </div>
 
       {/* Search Bar & Curated Genre Chips */}
-      <div className="p-3 bg-[#111118]/90 border-b border-white/[0.08] shrink-0 space-y-2">
+      <div
+        className={`p-3 border-b shrink-0 space-y-2 transition-colors ${
+          isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-[#111118]/90 border-white/[0.08]'
+        }`}
+      >
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -332,19 +345,23 @@ export const MusicApp: React.FC = () => {
           className="flex items-center gap-2"
         >
           <div className="relative flex-1">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400" />
+            <Search className={`w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 ${isLightMode ? 'text-slate-400' : 'text-zinc-400'}`} />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Titel, Künstler oder Album in Apple Music suchen..."
-              className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-[#191924] border border-white/10 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 transition-colors"
+              className={`w-full pl-8 pr-3 py-1.5 rounded-xl border text-xs outline-none transition-colors ${
+                isLightMode
+                  ? 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-purple-500 shadow-sm'
+                  : 'bg-[#191924] border-white/10 text-white placeholder-zinc-500 focus:border-purple-500'
+              }`}
             />
           </div>
           <button
             type="submit"
             disabled={isLoading}
-            className="px-3 py-1.5 rounded-xl bg-purple-600/80 hover:bg-purple-600 text-xs font-medium text-white transition-colors flex items-center gap-1.5 disabled:opacity-50"
+            className="px-3 py-1.5 rounded-xl text-xs font-medium text-white transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-sm"
             style={{ backgroundColor: accentConfig.primary }}
           >
             {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
@@ -354,7 +371,7 @@ export const MusicApp: React.FC = () => {
 
         {/* Quick Search Chips */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-[11px]">
-          <span className="text-zinc-500 font-medium whitespace-nowrap text-[10px] uppercase tracking-wider">
+          <span className={`font-medium whitespace-nowrap text-[10px] uppercase tracking-wider ${isLightMode ? 'text-slate-400' : 'text-zinc-500'}`}>
             Trends:
           </span>
           {CURATED_SEARCHES.map((chip) => (
@@ -364,7 +381,11 @@ export const MusicApp: React.FC = () => {
                 setSearchQuery(chip);
                 searchAppleMusic(chip);
               }}
-              className="px-2.5 py-0.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white whitespace-nowrap transition-colors"
+              className={`px-2.5 py-0.5 rounded-full border whitespace-nowrap transition-colors ${
+                isLightMode
+                  ? 'bg-white hover:bg-slate-200 border-slate-300 text-slate-700 hover:text-slate-900 shadow-xs'
+                  : 'bg-white/5 hover:bg-white/10 border-white/10 text-zinc-300 hover:text-white'
+              }`}
             >
               {chip}
             </button>
@@ -375,11 +396,19 @@ export const MusicApp: React.FC = () => {
       {/* Main Content: Split Player & Tracklist */}
       <div className="flex-1 overflow-hidden grid grid-cols-1 md:grid-cols-12 min-h-0">
         {/* Left: Player Stage */}
-        <div className="md:col-span-5 p-4 flex flex-col items-center justify-center border-r border-white/[0.08] bg-[#0d0d14] relative">
+        <div
+          className={`md:col-span-5 p-4 flex flex-col items-center justify-center border-r relative transition-colors ${
+            isLightMode ? 'bg-white border-slate-200' : 'bg-[#0d0d14] border-white/[0.08]'
+          }`}
+        >
           {currentTrack ? (
-            <div className="flex flex-col items-center text-center w-full max-w-[280px]">
+            <motion.div layout layoutId="player-stage" className="flex flex-col items-center text-center w-full max-w-[280px]">
               {/* Artwork Box */}
-              <div className="relative group w-48 h-48 sm:w-52 sm:h-52 rounded-2xl overflow-hidden shadow-2xl border border-white/10 mb-3 bg-[#191924]">
+              <div
+                className={`relative group w-48 h-48 sm:w-52 sm:h-52 rounded-2xl overflow-hidden shadow-xl border mb-3 ${
+                  isLightMode ? 'bg-slate-100 border-slate-200' : 'bg-[#191924] border-white/10'
+                }`}
+              >
                 <img
                   src={getHighResArtwork(currentTrack.artworkUrl100)}
                   alt={currentTrack.trackName}
@@ -410,13 +439,13 @@ export const MusicApp: React.FC = () => {
 
               {/* Title & Artist */}
               <div className="w-full">
-                <h3 className="font-semibold text-sm text-white truncate drop-shadow-sm">
+                <h3 className={`font-semibold text-sm truncate drop-shadow-sm ${isLightMode ? 'text-slate-900' : 'text-white'}`}>
                   {currentTrack.trackName}
                 </h3>
-                <p className="text-xs text-zinc-400 truncate mt-0.5">
+                <p className={`text-xs truncate mt-0.5 ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>
                   {currentTrack.artistName}
                 </p>
-                <p className="text-[10px] text-zinc-500 truncate mt-0.5">
+                <p className={`text-[10px] truncate mt-0.5 ${isLightMode ? 'text-slate-400' : 'text-zinc-500'}`}>
                   {currentTrack.collectionName} • {currentTrack.primaryGenreName}
                 </p>
               </div>
@@ -425,9 +454,9 @@ export const MusicApp: React.FC = () => {
               <div className="w-full h-10 mt-3 flex items-center justify-center">
                 <canvas ref={canvasRef} width={220} height={40} className="w-full h-10 opacity-85" />
               </div>
-            </div>
+            </motion.div>
           ) : (
-            <div className="flex flex-col items-center justify-center text-zinc-500 text-xs">
+            <div className={`flex flex-col items-center justify-center text-xs ${isLightMode ? 'text-slate-400' : 'text-zinc-500'}`}>
               <Disc3 className="w-12 h-12 animate-spin-slow opacity-30 mb-2" />
               <span>Suche nach Musiktiteln...</span>
             </div>
@@ -435,8 +464,12 @@ export const MusicApp: React.FC = () => {
         </div>
 
         {/* Right: Tracklist Results */}
-        <div className="md:col-span-7 flex flex-col overflow-hidden bg-[#09090d]">
-          <div className="px-3.5 py-2 border-b border-white/[0.06] flex items-center justify-between text-xs text-zinc-400">
+        <div className={`md:col-span-7 flex flex-col overflow-hidden transition-colors ${isLightMode ? 'bg-slate-50' : 'bg-[#09090d]'}`}>
+          <div
+            className={`px-3.5 py-2 border-b flex items-center justify-between text-xs transition-colors ${
+              isLightMode ? 'border-slate-200 text-slate-600' : 'border-white/[0.06] text-zinc-400'
+            }`}
+          >
             <span className="font-medium flex items-center gap-1.5">
               <ListMusic className="w-3.5 h-3.5" />
               <span>Suchergebnisse ({tracks.length})</span>
@@ -446,8 +479,8 @@ export const MusicApp: React.FC = () => {
                 href={currentTrack.trackViewUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="text-[11px] hover:text-white flex items-center gap-1 text-purple-400 transition-colors"
-                style={{ color: accentConfig.text }}
+                className="text-[11px] flex items-center gap-1 transition-colors hover:underline"
+                style={{ color: accentConfig.primary }}
               >
                 <span>In Apple Music öffnen</span>
                 <ExternalLink className="w-3 h-3" />
@@ -455,11 +488,13 @@ export const MusicApp: React.FC = () => {
             )}
           </div>
 
-          <div className="flex-1 overflow-y-auto p-2 space-y-1">
+          <motion.div layout className="flex-1 overflow-y-auto p-2 space-y-1">
             {tracks.map((track, idx) => {
               const isCurrent = idx === currentTrackIndex;
               return (
-                <div
+                <motion.div
+                  layout
+                  layoutId={`track-${track.trackId}`}
                   key={track.trackId}
                   onClick={() => {
                     setCurrentTrackIndex(idx);
@@ -468,7 +503,11 @@ export const MusicApp: React.FC = () => {
                   }}
                   className={`flex items-center gap-2.5 p-2 rounded-xl cursor-pointer transition-all ${
                     isCurrent
-                      ? 'bg-[#1c1a2e] border border-purple-500/40 text-white'
+                      ? isLightMode
+                        ? 'bg-purple-100/70 border border-purple-300 text-slate-900 shadow-xs'
+                        : 'bg-[#1c1a2e] border border-purple-500/40 text-white'
+                      : isLightMode
+                      ? 'hover:bg-slate-200/60 text-slate-800 border border-transparent'
                       : 'hover:bg-white/[0.04] text-zinc-300 border border-transparent'
                   }`}
                   style={{
@@ -476,12 +515,12 @@ export const MusicApp: React.FC = () => {
                   }}
                 >
                   {/* Track Number / Play state */}
-                  <div className="w-6 text-center text-xs font-mono text-zinc-500 shrink-0">
+                  <div className={`w-6 text-center text-xs font-mono shrink-0 ${isLightMode ? 'text-slate-400' : 'text-zinc-500'}`}>
                     {isCurrent && isPlaying ? (
                       <span className="flex space-x-0.5 justify-center items-end h-3">
-                        <span className="w-0.5 h-3 bg-purple-400 animate-pulse" />
-                        <span className="w-0.5 h-2 bg-purple-400 animate-pulse delay-75" />
-                        <span className="w-0.5 h-3.5 bg-purple-400 animate-pulse delay-150" />
+                        <span className="w-0.5 h-3 bg-purple-500 animate-pulse" />
+                        <span className="w-0.5 h-2 bg-purple-500 animate-pulse delay-75" />
+                        <span className="w-0.5 h-3.5 bg-purple-500 animate-pulse delay-150" />
                       </span>
                     ) : (
                       idx + 1
@@ -498,34 +537,54 @@ export const MusicApp: React.FC = () => {
 
                   {/* Track Info */}
                   <div className="flex-1 min-w-0">
-                    <p className={`text-xs font-medium truncate ${isCurrent ? 'text-purple-300' : 'text-zinc-200'}`}>
+                    <p
+                      className={`text-xs font-medium truncate ${
+                        isCurrent
+                          ? isLightMode
+                            ? 'text-purple-700 font-bold'
+                            : 'text-purple-300'
+                          : isLightMode
+                          ? 'text-slate-900'
+                          : 'text-zinc-200'
+                      }`}
+                    >
                       {track.trackName}
                     </p>
-                    <p className="text-[11px] text-zinc-400 truncate">
+                    <p className={`text-[11px] truncate ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>
                       {track.artistName} • {track.collectionName}
                     </p>
                   </div>
 
                   {/* Duration / Preview badge */}
                   <div className="text-right shrink-0">
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-400 font-mono">
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                        isLightMode ? 'bg-slate-200 text-slate-600' : 'bg-white/5 text-zinc-400'
+                      }`}
+                    >
                       0:30
                     </span>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </div>
       </div>
 
       {/* Bottom Audio Controls Bar */}
-      <div className="px-4 py-2.5 bg-[#12121a]/95 backdrop-blur-xl border-t border-white/[0.08] flex items-center justify-between gap-4 shrink-0">
+      <div
+        className={`px-4 py-2.5 backdrop-blur-xl border-t flex items-center justify-between gap-4 shrink-0 transition-colors ${
+          isLightMode ? 'bg-slate-100/95 border-slate-200' : 'bg-[#12121a]/95 border-white/[0.08]'
+        }`}
+      >
         {/* Playback Controls & Progress */}
         <div className="flex items-center gap-2">
           <button
             onClick={handlePrev}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+            className={`p-1.5 rounded-lg transition-colors ${
+              isLightMode ? 'hover:bg-slate-200 text-slate-600 hover:text-slate-900' : 'hover:bg-white/10 text-zinc-400 hover:text-white'
+            }`}
             title="Vorheriger Titel"
           >
             <SkipBack className="w-4 h-4" />
@@ -533,14 +592,18 @@ export const MusicApp: React.FC = () => {
 
           <button
             onClick={togglePlay}
-            className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shadow-lg hover:scale-105 transition-transform"
+            className={`w-9 h-9 rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-transform ${
+              isLightMode ? 'bg-slate-900 text-white' : 'bg-white text-black'
+            }`}
           >
             {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
           </button>
 
           <button
             onClick={handleNext}
-            className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+            className={`p-1.5 rounded-lg transition-colors ${
+              isLightMode ? 'hover:bg-slate-200 text-slate-600 hover:text-slate-900' : 'hover:bg-white/10 text-zinc-400 hover:text-white'
+            }`}
             title="Nächster Titel"
           >
             <SkipForward className="w-4 h-4" />
@@ -549,7 +612,7 @@ export const MusicApp: React.FC = () => {
 
         {/* Progress Scrubber */}
         <div className="flex-1 flex items-center gap-2 max-w-md">
-          <span className="text-[10px] font-mono text-zinc-400 w-7 text-right">
+          <span className={`text-[10px] font-mono w-7 text-right ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>
             {formatTime(currentTime)}
           </span>
           <input
@@ -565,9 +628,11 @@ export const MusicApp: React.FC = () => {
                 audioRef.current.currentTime = val;
               }
             }}
-            className="flex-1 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-purple-500"
+            className={`flex-1 h-1 rounded-lg appearance-none cursor-pointer accent-purple-600 ${
+              isLightMode ? 'bg-slate-300' : 'bg-white/20'
+            }`}
           />
-          <span className="text-[10px] font-mono text-zinc-400 w-7">
+          <span className={`text-[10px] font-mono w-7 ${isLightMode ? 'text-slate-500' : 'text-zinc-400'}`}>
             {formatTime(duration || 30)}
           </span>
         </div>
@@ -576,7 +641,9 @@ export const MusicApp: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsMuted((prev) => !prev)}
-            className="p-1 rounded hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+            className={`p-1 rounded transition-colors ${
+              isLightMode ? 'hover:bg-slate-200 text-slate-600 hover:text-slate-900' : 'hover:bg-white/10 text-zinc-400 hover:text-white'
+            }`}
           >
             {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
           </button>
@@ -590,7 +657,9 @@ export const MusicApp: React.FC = () => {
               setVolume(parseFloat(e.target.value));
               setIsMuted(false);
             }}
-            className="w-16 h-1 bg-white/20 rounded-lg appearance-none cursor-pointer accent-purple-500"
+            className={`w-16 h-1 rounded-lg appearance-none cursor-pointer accent-purple-600 ${
+              isLightMode ? 'bg-slate-300' : 'bg-white/20'
+            }`}
           />
         </div>
       </div>
@@ -599,7 +668,7 @@ export const MusicApp: React.FC = () => {
       <AnimatePresence>
         {showSubscriptionModal && (
           <div
-            className="absolute inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+            className="absolute inset-0 z-50 bg-black/60 backdrop-blur-md flex items-center justify-center p-4"
             onClick={() => setShowSubscriptionModal(false)}
           >
             <motion.div
@@ -607,30 +676,34 @@ export const MusicApp: React.FC = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 10 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-sm rounded-3xl bg-[#161622] border border-white/20 p-6 shadow-2xl text-center space-y-4"
+              className={`w-full max-w-sm rounded-3xl border p-6 shadow-2xl text-center space-y-4 ${
+                isLightMode ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#161622] border-white/20 text-white'
+              }`}
             >
               <div className="w-14 h-14 rounded-2xl bg-[#fa243c] flex items-center justify-center mx-auto shadow-lg shadow-red-500/30">
                 <Music className="w-8 h-8 text-white fill-white" />
               </div>
 
               <div>
-                <h3 className="text-lg font-bold text-white">Apple Music Abonnieren</h3>
-                <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                <h3 className={`text-lg font-bold ${isLightMode ? 'text-slate-900' : 'text-white'}`}>Apple Music Abonnieren</h3>
+                <p className={`text-xs mt-1 leading-relaxed ${isLightMode ? 'text-slate-600' : 'text-zinc-400'}`}>
                   Erhalte Zugriff auf über 100 Millionen Songs in voller Länge, verlustfreies Hi-Res Audio und Spatial Audio mit Dolby Atmos.
                 </p>
               </div>
 
-              <div className="space-y-2 text-left text-xs bg-white/5 p-3 rounded-2xl border border-white/10">
-                <div className="flex items-center gap-2 text-zinc-300">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <div className={`space-y-2 text-left text-xs p-3 rounded-2xl border ${
+                isLightMode ? 'bg-slate-50 border-slate-200' : 'bg-white/5 border-white/10'
+              }`}>
+                <div className={`flex items-center gap-2 ${isLightMode ? 'text-slate-700' : 'text-zinc-300'}`}>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                   <span>Unbegrenzte Wiedergabe in voller Länge</span>
                 </div>
-                <div className="flex items-center gap-2 text-zinc-300">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <div className={`flex items-center gap-2 ${isLightMode ? 'text-slate-700' : 'text-zinc-300'}`}>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                   <span>Lossless Audio & Spatial Audio</span>
                 </div>
-                <div className="flex items-center gap-2 text-zinc-300">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <div className={`flex items-center gap-2 ${isLightMode ? 'text-slate-700' : 'text-zinc-300'}`}>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                   <span>Offline-Downloads auf allen Geräten</span>
                 </div>
               </div>
@@ -646,7 +719,9 @@ export const MusicApp: React.FC = () => {
                 </a>
                 <button
                   onClick={() => setShowSubscriptionModal(false)}
-                  className="w-full py-2 rounded-xl bg-white/10 hover:bg-white/15 text-zinc-300 text-xs font-medium transition-colors"
+                  className={`w-full py-2 rounded-xl text-xs font-medium transition-colors ${
+                    isLightMode ? 'bg-slate-100 hover:bg-slate-200 text-slate-700' : 'bg-white/10 hover:bg-white/15 text-zinc-300'
+                  }`}
                 >
                   Mit 30-Sekunden-Vorschau fortfahren
                 </button>

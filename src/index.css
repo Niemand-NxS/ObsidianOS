@@ -21,12 +21,12 @@
   }
   
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.15);
     border-radius: 9999px;
   }
   
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(168, 85, 247, 0.4);
+    background: rgba(168, 85, 247, 0.5);
   }
 }
 
@@ -38,34 +38,145 @@
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* Glass panel styling */
+/* Custom Scrollbar Helper */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.5);
+}
+
+/* Base Glass Panels */
 .glass-panel {
-  background: rgba(18, 18, 23, 0.82);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--os-glass-card-bg, rgba(18, 18, 23, 0.85));
+  backdrop-filter: blur(var(--os-blur, 24px)) saturate(160%);
+  -webkit-backdrop-filter: blur(var(--os-blur, 24px)) saturate(160%);
+  border: 1px solid var(--os-glass-card-border, rgba(255, 255, 255, 0.1));
+  color: var(--os-glass-text, #ffffff);
 }
 
 .glass-panel-dock {
-  background: rgba(15, 15, 20, 0.75);
+  background: var(--os-glass-dock-bg, rgba(15, 15, 22, 0.8));
   backdrop-filter: blur(28px) saturate(180%);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--os-glass-card-border, rgba(255, 255, 255, 0.12));
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 1px rgba(255, 255, 255, 0.2);
 }
 
 .glass-panel-subtle {
-  background: rgba(26, 26, 34, 0.55);
+  background: var(--os-glass-subtle-bg, rgba(26, 26, 36, 0.6));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--os-glass-card-border, rgba(255, 255, 255, 0.08));
 }
 
+/* =========================================================================
+   Light Theme (Helles Design)
+   ========================================================================= */
+.theme-light {
+  color-scheme: light;
+  --os-surface: #ffffff;
+  --os-surface-subtle: #f8fafc;
+  --os-border: #e2e8f0;
+  --os-text-primary: #0f172a;
+  --os-text-secondary: #334155;
+  --os-text-muted: #64748b;
+  --os-glass-card-bg: rgba(255, 255, 255, 0.95);
+  --os-glass-card-border: rgba(0, 0, 0, 0.1);
+  --os-glass-dock-bg: rgba(255, 255, 255, 0.9);
+  --os-glass-text: #0f172a;
+}
+
+.theme-light .glass-panel {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #0f172a;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.theme-light .glass-panel-dock {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.12);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.15);
+}
+
+.theme-light .custom-scrollbar::-webkit-scrollbar-thumb,
+.theme-light ::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.theme-light .custom-scrollbar::-webkit-scrollbar-thumb:hover,
+.theme-light ::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* =========================================================================
+   Glassy Theme (Milchglas / Frosted Glass)
+   ========================================================================= */
+.theme-glassy {
+  --os-surface: rgba(18, 18, 28, 0.65);
+  --os-border: rgba(255, 255, 255, 0.15);
+  --os-glass-card-border: rgba(255, 255, 255, 0.15);
+}
+
+.theme-glassy .glass-panel {
+  background: rgba(15, 15, 24, 0.65);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.theme-glassy.glass-contrast-dark .glass-panel {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #0f172a;
+}
+
+/* =========================================================================
+   Glass Contrast Modes (Dark text on light glass / White text on dark glass)
+   ========================================================================= */
+.glass-contrast-dark {
+  --os-glass-text: #09090b;
+  --os-glass-text-muted: rgba(9, 9, 11, 0.75);
+  --os-glass-text-subtle: rgba(9, 9, 11, 0.5);
+  --os-glass-card-bg: rgba(255, 255, 255, 0.75);
+  --os-glass-card-border: rgba(0, 0, 0, 0.12);
+  --os-glass-dock-bg: rgba(255, 255, 255, 0.85);
+  --os-glass-subtle-bg: rgba(255, 255, 255, 0.5);
+}
+
+.glass-contrast-light {
+  --os-glass-text: #ffffff;
+  --os-glass-text-muted: rgba(255, 255, 255, 0.75);
+  --os-glass-text-subtle: rgba(255, 255, 255, 0.45);
+  --os-glass-card-bg: rgba(18, 18, 26, 0.7);
+  --os-glass-card-border: rgba(255, 255, 255, 0.15);
+  --os-glass-dock-bg: rgba(15, 15, 22, 0.8);
+  --os-glass-subtle-bg: rgba(24, 24, 34, 0.55);
+}
+
+/* Terminal is always a true developer console */
+.terminal-theme {
+  background-color: #0a0a0f !important;
+  color: #e4e4e7 !important;
+}
+
+/* Glow Utilities */
 .glow-violet {
-  box-shadow: 0 0 25px rgba(168, 85, 247, 0.18);
+  box-shadow: 0 0 25px rgba(168, 85, 247, 0.2);
 }
 
 .glow-violet-sm {
   box-shadow: 0 0 12px rgba(168, 85, 247, 0.25);
 }
-

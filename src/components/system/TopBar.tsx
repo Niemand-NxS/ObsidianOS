@@ -55,10 +55,12 @@ export const TopBar: React.FC = () => {
     toggleGlobalMedia,
     settings,
     effectiveTheme,
+    effectiveGlassContrast,
+    isLight,
+    isGlassy,
   } = useOS();
 
-  const isLight = effectiveTheme === 'light';
-  const isGlassy = effectiveTheme === 'glassy';
+  const isDarkContrast = isLight || effectiveGlassContrast === 'dark';
 
   const [time, setTime] = useState<string>('');
   const [dateStr, setDateStr] = useState<string>('');
@@ -137,16 +139,26 @@ export const TopBar: React.FC = () => {
   };
 
   const headerBgClass = isLight
-    ? 'bg-white/80 border-b border-black/[0.08] text-zinc-800'
+    ? 'bg-white/80 border-b border-black/[0.08] text-zinc-900 shadow-sm backdrop-blur-xl'
     : isGlassy
-    ? 'bg-white/[0.12] border-b border-white/20 text-white backdrop-blur-2xl'
+    ? isDarkContrast
+      ? 'bg-white/70 border-b border-black/15 text-zinc-950 shadow-sm backdrop-blur-2xl'
+      : 'bg-black/40 border-b border-white/15 text-white backdrop-blur-2xl'
     : 'bg-[#0c0c11]/85 border-b border-white/[0.07] text-[#e4e4e7] backdrop-blur-xl';
 
-  const menuBgClass = isLight
-    ? 'bg-white/95 border-zinc-200 text-zinc-900 shadow-2xl'
+  const textBtnClass = isDarkContrast
+    ? 'text-zinc-900 hover:text-black hover:bg-black/[0.08]'
+    : 'text-zinc-200 hover:text-white hover:bg-white/10';
+
+  const menuBgClass = isDarkContrast
+    ? 'bg-white/95 border-slate-300 text-zinc-900 shadow-2xl backdrop-blur-2xl'
     : isGlassy
-    ? 'bg-black/60 border-white/20 text-white backdrop-blur-3xl shadow-2xl'
+    ? 'bg-black/75 border-white/20 text-white backdrop-blur-3xl shadow-2xl'
     : 'bg-[#14141c]/95 border-[#27272a] text-zinc-200 shadow-2xl backdrop-blur-2xl';
+
+  const menuBtnClass = isDarkContrast
+    ? 'text-zinc-800 hover:bg-slate-100 hover:text-black'
+    : 'text-zinc-200 hover:bg-[#22222f] hover:text-white';
 
   return (
     <header
@@ -160,12 +172,14 @@ export const TopBar: React.FC = () => {
           <button
             id="btn-obsidian-menu"
             onClick={() => toggleMenu('obsidian')}
-            className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md transition-colors font-bold text-white tracking-wide ${
-              openMenu === 'obsidian' ? 'bg-white/15' : 'hover:bg-white/10'
+            className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md transition-colors font-bold tracking-wide ${
+              openMenu === 'obsidian'
+                ? isDarkContrast ? 'bg-black/10 text-zinc-950' : 'bg-white/15 text-white'
+                : isDarkContrast ? 'hover:bg-black/5 text-zinc-900' : 'hover:bg-white/10 text-white'
             }`}
           >
             <span className="text-sm">✦</span>
-            <span className="font-semibold text-xs text-white">ObsidianOS</span>
+            <span className="font-semibold text-xs">ObsidianOS</span>
           </button>
 
           {/* System Dropdown Menu */}
@@ -175,9 +189,9 @@ export const TopBar: React.FC = () => {
                 initial={{ opacity: 0, y: -4, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                className="absolute top-8 left-0 w-56 rounded-2xl bg-[#14141c]/95 backdrop-blur-2xl border border-[#27272a] shadow-2xl p-1.5 z-50 text-xs space-y-0.5"
+                className={`absolute top-8 left-0 w-56 rounded-2xl border shadow-2xl p-1.5 z-50 text-xs space-y-0.5 ${menuBgClass}`}
               >
-                <div className="px-3 py-2 border-b border-[#27272a]/60 flex items-center gap-2.5">
+                <div className={`px-3 py-2 border-b flex items-center gap-2.5 ${isDarkContrast ? 'border-slate-200' : 'border-[#27272a]/60'}`}>
                   <UserAvatar
                     avatar={currentUser?.avatar}
                     name={currentUser?.displayName}
@@ -186,8 +200,8 @@ export const TopBar: React.FC = () => {
                     ringColor={accentConfig.primary}
                   />
                   <div className="overflow-hidden">
-                    <p className="font-bold text-white text-xs truncate">{currentUser?.displayName}</p>
-                    <p className="text-[10px] text-zinc-400">ObsidianOS • @{currentUser?.username}</p>
+                    <p className={`font-bold text-xs truncate ${isDarkContrast ? 'text-zinc-950' : 'text-white'}`}>{currentUser?.displayName}</p>
+                    <p className={`text-[10px] ${isDarkContrast ? 'text-zinc-500' : 'text-zinc-400'}`}>ObsidianOS • @{currentUser?.username}</p>
                   </div>
                 </div>
 
@@ -196,7 +210,7 @@ export const TopBar: React.FC = () => {
                     openApp('settings');
                     setOpenMenu(null);
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${menuBtnClass}`}
                 >
                   <Sliders className="w-3.5 h-3.5 text-purple-400" />
                   Systemeinstellungen...
@@ -207,7 +221,7 @@ export const TopBar: React.FC = () => {
                     openApp('appstore');
                     setOpenMenu(null);
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-colors text-left ${menuBtnClass}`}
                 >
                   <ShoppingBag className="w-3.5 h-3.5 text-purple-400" />
                   App Store öffnen
@@ -218,29 +232,29 @@ export const TopBar: React.FC = () => {
                     openSpotlight();
                     setOpenMenu(null);
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-colors text-left ${menuBtnClass}`}
                 >
                   <div className="flex items-center gap-2.5">
                     <Search className="w-3.5 h-3.5 text-purple-400" />
                     Spotlight Suche
                   </div>
-                  <span className="text-[10px] text-zinc-500 font-mono">⌘ Space</span>
+                  <span className={`text-[10px] font-mono ${isDarkContrast ? 'text-zinc-400' : 'text-zinc-500'}`}>⌘ Space</span>
                 </button>
 
-                <div className="border-t border-[#27272a]/60 my-1" />
+                <div className={`border-t my-1 ${isDarkContrast ? 'border-slate-200' : 'border-[#27272a]/60'}`} />
 
                 <button
                   onClick={() => {
                     lockScreen();
                     setOpenMenu(null);
                   }}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-colors text-left ${menuBtnClass}`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Lock className="w-3.5 h-3.5 text-zinc-400" />
+                    <Lock className={`w-3.5 h-3.5 ${isDarkContrast ? 'text-zinc-500' : 'text-zinc-400'}`} />
                     Bildschirm sperren
                   </div>
-                  <span className="text-[10px] text-zinc-500 font-mono">⌘ L</span>
+                  <span className={`text-[10px] font-mono ${isDarkContrast ? 'text-zinc-400' : 'text-zinc-500'}`}>⌘ L</span>
                 </button>
 
                 <button
@@ -248,9 +262,9 @@ export const TopBar: React.FC = () => {
                     logout();
                     setOpenMenu(null);
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-zinc-200 hover:bg-red-500/10 hover:text-red-300 transition-colors text-left"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-red-500 hover:bg-red-500/10 transition-colors text-left"
                 >
-                  <LogOut className="w-3.5 h-3.5 text-red-400" />
+                  <LogOut className="w-3.5 h-3.5 text-red-500" />
                   Abmelden ({currentUser?.displayName})
                 </button>
               </motion.div>
@@ -259,18 +273,20 @@ export const TopBar: React.FC = () => {
         </div>
 
         {/* Active App Title */}
-        <span className="font-bold text-white text-xs px-1">
+        <span className={`font-bold text-xs px-1 ${isDarkContrast ? 'text-zinc-950' : 'text-white'}`}>
           {activeWin ? activeWin.title : 'Finder'}
         </span>
 
         {/* Schnellaktionen Dropdown-Menüs (Ablage, Bearbeiten, Ansicht, Fenster, Hilfe) */}
-        <div className="hidden sm:flex items-center gap-0.5 text-zinc-300 text-[11px]">
+        <div className={`hidden sm:flex items-center gap-0.5 text-[11px] ${isDarkContrast ? 'text-zinc-700' : 'text-zinc-300'}`}>
           {/* ABLAGE (File) Menu */}
           <div className="relative">
             <button
               onClick={() => toggleMenu('file')}
               className={`px-2 py-0.5 rounded-md transition-colors ${
-                openMenu === 'file' ? 'bg-white/15 text-white' : 'hover:bg-white/10 text-zinc-300'
+                openMenu === 'file'
+                  ? isDarkContrast ? 'bg-black/10 text-zinc-950' : 'bg-white/15 text-white'
+                  : textBtnClass
               }`}
             >
               Ablage
@@ -282,14 +298,14 @@ export const TopBar: React.FC = () => {
                   initial={{ opacity: 0, y: -4, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                  className="absolute top-7 left-0 w-52 rounded-2xl bg-[#14141c]/95 backdrop-blur-2xl border border-[#27272a] shadow-2xl p-1.5 z-50 text-xs space-y-0.5"
+                  className={`absolute top-7 left-0 w-52 rounded-2xl border shadow-2xl p-1.5 z-50 text-xs space-y-0.5 ${menuBgClass}`}
                 >
                   <button
                     onClick={() => {
                       openApp('files');
                       setOpenMenu(null);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-colors text-left ${menuBtnClass}`}
                   >
                     <FolderPlus className="w-3.5 h-3.5 text-purple-400" />
                     <span>Neues Finder-Fenster</span>
@@ -300,7 +316,7 @@ export const TopBar: React.FC = () => {
                       openApp('browser');
                       setOpenMenu(null);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-colors text-left ${menuBtnClass}`}
                   >
                     <Plus className="w-3.5 h-3.5 text-purple-400" />
                     <span>Neuer Browser Tab</span>
@@ -311,28 +327,28 @@ export const TopBar: React.FC = () => {
                       openApp('notes');
                       setOpenMenu(null);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                    className={`w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl transition-colors text-left ${menuBtnClass}`}
                   >
                     <Plus className="w-3.5 h-3.5 text-purple-400" />
                     <span>Neue Notiz erstellen</span>
                   </button>
 
-                  <div className="border-t border-[#27272a]/60 my-1" />
+                  <div className={`border-t my-1 ${isDarkContrast ? 'border-slate-200' : 'border-[#27272a]/60'}`} />
 
                   <button
                     onClick={handleCloseActiveWindow}
                     disabled={!activeWin}
                     className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-left transition-colors ${
                       activeWin
-                        ? 'text-zinc-200 hover:bg-[#22222f] hover:text-white'
-                        : 'text-zinc-600 cursor-not-allowed'
+                        ? menuBtnClass
+                        : isDarkContrast ? 'text-zinc-300 cursor-not-allowed' : 'text-zinc-600 cursor-not-allowed'
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
                       <X className="w-3.5 h-3.5 text-red-400" />
                       <span>Fenster schließen</span>
                     </div>
-                    <span className="text-[10px] text-zinc-500 font-mono">⌘ W</span>
+                    <span className={`text-[10px] font-mono ${isDarkContrast ? 'text-zinc-400' : 'text-zinc-500'}`}>⌘ W</span>
                   </button>
                 </motion.div>
               )}
@@ -344,7 +360,9 @@ export const TopBar: React.FC = () => {
             <button
               onClick={() => toggleMenu('edit')}
               className={`px-2 py-0.5 rounded-md transition-colors ${
-                openMenu === 'edit' ? 'bg-white/15 text-white' : 'hover:bg-white/10 text-zinc-300'
+                openMenu === 'edit'
+                  ? isDarkContrast ? 'bg-black/10 text-zinc-950' : 'bg-white/15 text-white'
+                  : textBtnClass
               }`}
             >
               Bearbeiten
@@ -356,7 +374,7 @@ export const TopBar: React.FC = () => {
                   initial={{ opacity: 0, y: -4, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                  className="absolute top-7 left-0 w-48 rounded-2xl bg-[#14141c]/95 backdrop-blur-2xl border border-[#27272a] shadow-2xl p-1.5 z-50 text-xs space-y-0.5"
+                  className={`absolute top-7 left-0 w-48 rounded-2xl border shadow-2xl p-1.5 z-50 text-xs space-y-0.5 ${menuBgClass}`}
                 >
                   <button
                     onClick={() => {
@@ -364,10 +382,10 @@ export const TopBar: React.FC = () => {
                       sounds.playClick();
                       setOpenMenu(null);
                     }}
-                    className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl transition-colors text-left ${menuBtnClass}`}
                   >
                     <span>Rückgängig</span>
-                    <span className="text-[10px] text-zinc-500 font-mono">⌘ Z</span>
+                    <span className={`text-[10px] font-mono ${isDarkContrast ? 'text-zinc-400' : 'text-zinc-500'}`}>⌘ Z</span>
                   </button>
 
                   <button
@@ -376,13 +394,13 @@ export const TopBar: React.FC = () => {
                       sounds.playClick();
                       setOpenMenu(null);
                     }}
-                    className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl transition-colors text-left ${menuBtnClass}`}
                   >
                     <span>Wiederholen</span>
-                    <span className="text-[10px] text-zinc-500 font-mono">⇧ ⌘ Z</span>
+                    <span className={`text-[10px] font-mono ${isDarkContrast ? 'text-zinc-400' : 'text-zinc-500'}`}>⇧ ⌘ Z</span>
                   </button>
 
-                  <div className="border-t border-[#27272a]/60 my-1" />
+                  <div className={`border-t my-1 ${isDarkContrast ? 'border-slate-200' : 'border-[#27272a]/60'}`} />
 
                   <button
                     onClick={() => {
@@ -391,13 +409,13 @@ export const TopBar: React.FC = () => {
                       addNotification('Kopiert', 'Auswahl in die Zwischenablage kopiert.', 'info', 'System');
                       setOpenMenu(null);
                     }}
-                    className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl transition-colors text-left ${menuBtnClass}`}
                   >
                     <div className="flex items-center gap-2">
                       <Copy className="w-3.5 h-3.5 text-purple-400" />
                       <span>Kopieren</span>
                     </div>
-                    <span className="text-[10px] text-zinc-500 font-mono">⌘ C</span>
+                    <span className={`text-[10px] font-mono ${isDarkContrast ? 'text-zinc-400' : 'text-zinc-500'}`}>⌘ C</span>
                   </button>
 
                   <button
@@ -406,10 +424,10 @@ export const TopBar: React.FC = () => {
                       sounds.playClick();
                       setOpenMenu(null);
                     }}
-                    className="w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl transition-colors text-left ${menuBtnClass}`}
                   >
                     <span>Alles auswählen</span>
-                    <span className="text-[10px] text-zinc-500 font-mono">⌘ A</span>
+                    <span className={`text-[10px] font-mono ${isDarkContrast ? 'text-zinc-400' : 'text-zinc-500'}`}>⌘ A</span>
                   </button>
                 </motion.div>
               )}
@@ -421,7 +439,9 @@ export const TopBar: React.FC = () => {
             <button
               onClick={() => toggleMenu('view')}
               className={`px-2 py-0.5 rounded-md transition-colors ${
-                openMenu === 'view' ? 'bg-white/15 text-white' : 'hover:bg-white/10 text-zinc-300'
+                openMenu === 'view'
+                  ? isDarkContrast ? 'bg-black/10 text-zinc-950' : 'bg-white/15 text-white'
+                  : textBtnClass
               }`}
             >
               Ansicht
@@ -433,22 +453,22 @@ export const TopBar: React.FC = () => {
                   initial={{ opacity: 0, y: -4, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                  className="absolute top-7 left-0 w-52 rounded-2xl bg-[#14141c]/95 backdrop-blur-2xl border border-[#27272a] shadow-2xl p-1.5 z-50 text-xs space-y-0.5"
+                  className={`absolute top-7 left-0 w-52 rounded-2xl border shadow-2xl p-1.5 z-50 text-xs space-y-0.5 ${menuBgClass}`}
                 >
                   <button
                     onClick={handleMaximizeActiveWindow}
                     disabled={!activeWin}
                     className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-left transition-colors ${
                       activeWin
-                        ? 'text-zinc-200 hover:bg-[#22222f] hover:text-white'
-                        : 'text-zinc-600 cursor-not-allowed'
+                        ? menuBtnClass
+                        : isDarkContrast ? 'text-zinc-300 cursor-not-allowed' : 'text-zinc-600 cursor-not-allowed'
                     }`}
                   >
                     <div className="flex items-center gap-2">
                       <Maximize className="w-3.5 h-3.5 text-purple-400" />
                       <span>Vollbildmodus</span>
                     </div>
-                    <span className="text-[10px] text-zinc-500 font-mono">F11</span>
+                    <span className={`text-[10px] font-mono ${isDarkContrast ? 'text-zinc-400' : 'text-zinc-500'}`}>F11</span>
                   </button>
 
                   <button
@@ -456,7 +476,7 @@ export const TopBar: React.FC = () => {
                       toggleControlCenter();
                       setOpenMenu(null);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors text-left ${menuBtnClass}`}
                   >
                     <Sliders className="w-3.5 h-3.5 text-purple-400" />
                     <span>Kontrollzentrum</span>
@@ -467,7 +487,7 @@ export const TopBar: React.FC = () => {
                       openApp('settings');
                       setOpenMenu(null);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors text-left ${menuBtnClass}`}
                   >
                     <Sparkles className="w-3.5 h-3.5 text-purple-400" />
                     <span>Wallpaper & Theme</span>
@@ -482,7 +502,9 @@ export const TopBar: React.FC = () => {
             <button
               onClick={() => toggleMenu('window')}
               className={`px-2 py-0.5 rounded-md transition-colors ${
-                openMenu === 'window' ? 'bg-white/15 text-white' : 'hover:bg-white/10 text-zinc-300'
+                openMenu === 'window'
+                  ? isDarkContrast ? 'bg-black/10 text-zinc-950' : 'bg-white/15 text-white'
+                  : textBtnClass
               }`}
             >
               Fenster
@@ -494,22 +516,22 @@ export const TopBar: React.FC = () => {
                   initial={{ opacity: 0, y: -4, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                  className="absolute top-7 left-0 w-52 rounded-2xl bg-[#14141c]/95 backdrop-blur-2xl border border-[#27272a] shadow-2xl p-1.5 z-50 text-xs space-y-0.5"
+                  className={`absolute top-7 left-0 w-52 rounded-2xl border shadow-2xl p-1.5 z-50 text-xs space-y-0.5 ${menuBgClass}`}
                 >
                   <button
                     onClick={handleMinimizeActiveWindow}
                     disabled={!activeWin}
                     className={`w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-left transition-colors ${
                       activeWin
-                        ? 'text-zinc-200 hover:bg-[#22222f] hover:text-white'
-                        : 'text-zinc-600 cursor-not-allowed'
+                        ? menuBtnClass
+                        : isDarkContrast ? 'text-zinc-300 cursor-not-allowed' : 'text-zinc-600 cursor-not-allowed'
                     }`}
                   >
                     <div className="flex items-center gap-2">
                       <Minus className="w-3.5 h-3.5 text-purple-400" />
                       <span>Minimieren</span>
                     </div>
-                    <span className="text-[10px] text-zinc-500 font-mono">⌘ M</span>
+                    <span className={`text-[10px] font-mono ${isDarkContrast ? 'text-zinc-400' : 'text-zinc-500'}`}>⌘ M</span>
                   </button>
 
                   <button
@@ -517,23 +539,23 @@ export const TopBar: React.FC = () => {
                     disabled={!activeWin}
                     className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-left transition-colors ${
                       activeWin
-                        ? 'text-zinc-200 hover:bg-[#22222f] hover:text-white'
-                        : 'text-zinc-600 cursor-not-allowed'
+                        ? menuBtnClass
+                        : isDarkContrast ? 'text-zinc-300 cursor-not-allowed' : 'text-zinc-600 cursor-not-allowed'
                     }`}
                   >
                     <Maximize2 className="w-3.5 h-3.5 text-blue-400" />
                     <span>Maximieren / Zoom</span>
                   </button>
 
-                  <div className="border-t border-[#27272a]/60 my-1" />
+                  <div className={`border-t my-1 ${isDarkContrast ? 'border-slate-200' : 'border-[#27272a]/60'}`} />
 
                   <button
                     onClick={() => handleSnapActive('left')}
                     disabled={!activeWin}
                     className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-left transition-colors ${
                       activeWin
-                        ? 'text-zinc-200 hover:bg-[#22222f] hover:text-white'
-                        : 'text-zinc-600 cursor-not-allowed'
+                        ? menuBtnClass
+                        : isDarkContrast ? 'text-zinc-300 cursor-not-allowed' : 'text-zinc-600 cursor-not-allowed'
                     }`}
                   >
                     <Columns className="w-3.5 h-3.5 text-zinc-400 rotate-180" />
@@ -545,8 +567,8 @@ export const TopBar: React.FC = () => {
                     disabled={!activeWin}
                     className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-left transition-colors ${
                       activeWin
-                        ? 'text-zinc-200 hover:bg-[#22222f] hover:text-white'
-                        : 'text-zinc-600 cursor-not-allowed'
+                        ? menuBtnClass
+                        : isDarkContrast ? 'text-zinc-300 cursor-not-allowed' : 'text-zinc-600 cursor-not-allowed'
                     }`}
                   >
                     <Columns className="w-3.5 h-3.5 text-zinc-400" />
@@ -562,7 +584,9 @@ export const TopBar: React.FC = () => {
             <button
               onClick={() => toggleMenu('help')}
               className={`px-2 py-0.5 rounded-md transition-colors ${
-                openMenu === 'help' ? 'bg-white/15 text-white' : 'hover:bg-white/10 text-zinc-300'
+                openMenu === 'help'
+                  ? isDarkContrast ? 'bg-black/10 text-zinc-950' : 'bg-white/15 text-white'
+                  : textBtnClass
               }`}
             >
               Hilfe
@@ -574,7 +598,7 @@ export const TopBar: React.FC = () => {
                   initial={{ opacity: 0, y: -4, scale: 0.96 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                  className="absolute top-7 left-0 w-52 rounded-2xl bg-[#14141c]/95 backdrop-blur-2xl border border-[#27272a] shadow-2xl p-1.5 z-50 text-xs space-y-0.5"
+                  className={`absolute top-7 left-0 w-52 rounded-2xl border shadow-2xl p-1.5 z-50 text-xs space-y-0.5 ${menuBgClass}`}
                 >
                   <button
                     onClick={() => {
@@ -586,7 +610,7 @@ export const TopBar: React.FC = () => {
                       );
                       setOpenMenu(null);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors text-left ${menuBtnClass}`}
                   >
                     <HelpCircle className="w-3.5 h-3.5 text-purple-400" />
                     <span>Tastaturkurzbefehle</span>
@@ -597,7 +621,7 @@ export const TopBar: React.FC = () => {
                       openApp('settings');
                       setOpenMenu(null);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors text-left ${menuBtnClass}`}
                   >
                     <Sliders className="w-3.5 h-3.5 text-purple-400" />
                     <span>Systemeinstellungen</span>
@@ -608,7 +632,7 @@ export const TopBar: React.FC = () => {
                       openApp('appstore');
                       setOpenMenu(null);
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 rounded-xl text-zinc-200 hover:bg-[#22222f] hover:text-white transition-colors text-left"
+                    className={`w-full flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors text-left ${menuBtnClass}`}
                   >
                     <ShoppingBag className="w-3.5 h-3.5 text-purple-400" />
                     <span>App Store</span>
@@ -626,7 +650,7 @@ export const TopBar: React.FC = () => {
         <button
           id="btn-topbar-spotlight"
           onClick={openSpotlight}
-          className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-zinc-300 hover:text-white"
+          className={`p-1.5 rounded-lg transition-colors ${textBtnClass}`}
           title="Spotlight Suche (Cmd+Space)"
         >
           <Search className="w-3.5 h-3.5" />
@@ -634,7 +658,9 @@ export const TopBar: React.FC = () => {
 
         {/* Dynamic Global Now Playing Pill */}
         {nowPlaying && (
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-white/[0.07] hover:bg-white/[0.12] border border-white/10 transition-all text-xs text-zinc-200">
+          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border transition-all text-xs ${
+            isDarkContrast ? 'bg-black/[0.06] border-black/10 text-zinc-900' : 'bg-white/[0.07] border-white/10 text-zinc-200'
+          }`}>
             <button
               onClick={toggleControlCenter}
               className="flex items-center gap-1.5 truncate max-w-[140px] sm:max-w-[200px]"
@@ -657,13 +683,13 @@ export const TopBar: React.FC = () => {
                 toggleGlobalMedia();
                 sounds.playClick();
               }}
-              className="p-1 rounded-full hover:bg-white/20 text-white transition-colors shrink-0"
+              className={`p-1 rounded-full transition-colors shrink-0 ${isDarkContrast ? 'hover:bg-black/10 text-zinc-900' : 'hover:bg-white/20 text-white'}`}
               title={nowPlaying.isPlaying ? 'Pausieren' : 'Abspielen'}
             >
               {nowPlaying.isPlaying ? (
-                <Pause className="w-2.5 h-2.5 fill-white" />
+                <Pause className="w-2.5 h-2.5 fill-current" />
               ) : (
-                <Play className="w-2.5 h-2.5 fill-white ml-0.5" />
+                <Play className="w-2.5 h-2.5 fill-current ml-0.5" />
               )}
             </button>
           </div>
@@ -676,7 +702,7 @@ export const TopBar: React.FC = () => {
           className={`p-1.5 rounded-lg transition-colors ${
             isControlCenterOpen
               ? 'bg-purple-600 text-white'
-              : 'hover:bg-white/10 text-zinc-300 hover:text-white'
+              : textBtnClass
           }`}
           title="Kontrollzentrum öffnen"
         >
@@ -688,7 +714,7 @@ export const TopBar: React.FC = () => {
           <button
             id="btn-topbar-date"
             onClick={() => setIsCalendarOpen(!isCalendarOpen)}
-            className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-lg hover:bg-white/10 transition-colors text-zinc-300 text-xs font-medium"
+            className={`hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-lg transition-colors text-xs font-medium ${textBtnClass}`}
           >
             <span>{dateStr}</span>
           </button>
@@ -699,15 +725,15 @@ export const TopBar: React.FC = () => {
                 initial={{ opacity: 0, y: -4, scale: 0.96 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                className="absolute top-8 right-0 w-64 rounded-2xl bg-[#14141c]/95 backdrop-blur-2xl border border-[#27272a] shadow-2xl p-3 z-50 text-xs"
+                className={`absolute top-8 right-0 w-64 rounded-2xl border shadow-2xl p-3 z-50 text-xs ${menuBgClass}`}
               >
-                <div className="flex items-center gap-2 border-b border-[#27272a]/60 pb-2 mb-2">
+                <div className={`flex items-center gap-2 border-b pb-2 mb-2 ${isDarkContrast ? 'border-slate-200' : 'border-[#27272a]/60'}`}>
                   <CalendarIcon className="w-4 h-4 text-purple-400" />
-                  <span className="font-bold text-white">{dateStr}</span>
+                  <span className={`font-bold ${isDarkContrast ? 'text-zinc-950' : 'text-white'}`}>{dateStr}</span>
                 </div>
                 <div className="text-center py-2 text-zinc-400">
-                  <p className="text-xl font-bold text-white font-mono">{time}</p>
-                  <p className="text-[11px] text-zinc-500 mt-1">Obsidian Kalender & Zeit</p>
+                  <p className={`text-xl font-bold font-mono ${isDarkContrast ? 'text-zinc-900' : 'text-white'}`}>{time}</p>
+                  <p className={`text-[11px] mt-1 ${isDarkContrast ? 'text-zinc-500' : 'text-zinc-400'}`}>Obsidian Kalender & Zeit</p>
                 </div>
               </motion.div>
             )}
@@ -717,7 +743,11 @@ export const TopBar: React.FC = () => {
         {/* Digital Clock (HH:MM format) */}
         <div
           id="topbar-clock"
-          className="px-2 py-0.5 rounded-lg font-mono text-xs font-semibold text-white bg-white/[0.04] border border-white/[0.06] tracking-tight"
+          className={`px-2 py-0.5 rounded-lg font-mono text-xs font-semibold tracking-tight ${
+            isDarkContrast
+              ? 'text-zinc-900 bg-black/[0.06] border border-black/10'
+              : 'text-white bg-white/[0.04] border border-white/[0.06]'
+          }`}
         >
           {time}
         </div>

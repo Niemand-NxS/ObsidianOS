@@ -37,7 +37,12 @@ export const Spotlight: React.FC = () => {
     triggerSync,
     updateSettings,
     accentConfig,
+    effectiveTheme,
+    effectiveGlassContrast,
+    isLight,
   } = useOS();
+
+  const isLightMode = isLight || effectiveGlassContrast === 'dark';
 
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -279,7 +284,7 @@ export const Spotlight: React.FC = () => {
       <div
         id="spotlight-backdrop"
         onClick={closeSpotlight}
-        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-md flex items-start justify-center pt-24 select-none"
+        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-md flex items-start justify-center pt-24 select-none"
       >
         <motion.div
           id="spotlight-modal"
@@ -288,13 +293,25 @@ export const Spotlight: React.FC = () => {
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: -20 }}
           transition={{ type: 'spring', stiffness: 450, damping: 30 }}
-          className="w-full max-w-2xl bg-[#12121a]/95 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col"
+          className={`w-full max-w-2xl backdrop-blur-2xl rounded-2xl border shadow-2xl overflow-hidden flex flex-col transition-colors ${
+            isLightMode
+              ? 'bg-white/95 border-black/15 text-zinc-900 shadow-slate-400/40'
+              : 'bg-[#12121a]/95 border-white/10 text-white shadow-2xl'
+          }`}
           style={{
-            boxShadow: `0 25px 60px rgba(0, 0, 0, 0.8), 0 0 35px ${accentConfig.glow}`,
+            boxShadow: isLightMode
+              ? `0 25px 60px rgba(0, 0, 0, 0.2), 0 0 35px ${accentConfig.glow}40`
+              : `0 25px 60px rgba(0, 0, 0, 0.8), 0 0 35px ${accentConfig.glow}`,
           }}
         >
           {/* Search Input Bar */}
-          <div className="h-14 px-4 flex items-center gap-3 border-b border-[#27272a]/80 bg-[#161622]">
+          <div
+            className={`h-14 px-4 flex items-center gap-3 border-b transition-colors ${
+              isLightMode
+                ? 'border-slate-200 bg-slate-100/90 text-zinc-900'
+                : 'border-[#27272a]/80 bg-[#161622] text-white'
+            }`}
+          >
             <Search className="w-5 h-5 text-purple-400 shrink-0" />
             <input
               ref={inputRef}
@@ -306,9 +323,17 @@ export const Spotlight: React.FC = () => {
               }}
               onKeyDown={handleKeyDown}
               placeholder="Spotlight Suche: Apps, Dateien, Einstellungen oder Rechenaufgabe..."
-              className="w-full bg-transparent text-sm font-medium text-white placeholder-zinc-500 focus:outline-none"
+              className={`w-full bg-transparent text-sm font-medium focus:outline-none ${
+                isLightMode ? 'text-zinc-900 placeholder-zinc-400' : 'text-white placeholder-zinc-500'
+              }`}
             />
-            <kbd className="px-2 py-1 rounded-lg bg-zinc-800/80 border border-zinc-700 text-[10px] font-mono text-zinc-400">
+            <kbd
+              className={`px-2 py-1 rounded-lg border text-[10px] font-mono ${
+                isLightMode
+                  ? 'bg-slate-200/80 border-slate-300 text-zinc-600'
+                  : 'bg-zinc-800/80 border-zinc-700 text-zinc-400'
+              }`}
+            >
               ESC
             </kbd>
           </div>
@@ -316,7 +341,11 @@ export const Spotlight: React.FC = () => {
           {/* Search Results List */}
           <div className="max-h-96 overflow-y-auto p-2 space-y-1">
             {results.length === 0 ? (
-              <div className="py-12 text-center text-zinc-500 text-xs">
+              <div
+                className={`py-12 text-center text-xs ${
+                  isLightMode ? 'text-zinc-500' : 'text-zinc-500'
+                }`}
+              >
                 Keine Ergebnisse für "{query}" gefunden
               </div>
             ) : (
@@ -329,27 +358,57 @@ export const Spotlight: React.FC = () => {
                     onMouseEnter={() => setSelectedIndex(idx)}
                     className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
                       isSelected
-                        ? 'bg-[#222232] border border-purple-500/40 shadow-sm'
+                        ? isLightMode
+                          ? 'bg-purple-100/80 border border-purple-400/50 shadow-sm'
+                          : 'bg-[#222232] border border-purple-500/40 shadow-sm'
+                        : isLightMode
+                        ? 'hover:bg-slate-100/80 border border-transparent'
                         : 'hover:bg-[#181824] border border-transparent'
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-[#1a1a26] border border-[#2e2e3e] flex items-center justify-center">
+                      <div
+                        className={`w-8 h-8 rounded-xl border flex items-center justify-center ${
+                          isLightMode
+                            ? 'bg-slate-100 border-slate-300'
+                            : 'bg-[#1a1a26] border-[#2e2e3e]'
+                        }`}
+                      >
                         {getIcon(item.icon)}
                       </div>
                       <div>
-                        <p className="text-xs font-bold text-white flex items-center gap-2">
+                        <p
+                          className={`text-xs font-bold flex items-center gap-2 ${
+                            isLightMode ? 'text-zinc-900' : 'text-white'
+                          }`}
+                        >
                           {item.title}
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-400 font-normal">
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded font-normal ${
+                              isLightMode
+                                ? 'bg-black/[0.06] text-zinc-600'
+                                : 'bg-white/5 text-zinc-400'
+                            }`}
+                          >
                             {item.category}
                           </span>
                         </p>
-                        <p className="text-[11px] text-zinc-400 line-clamp-1">{item.subtitle}</p>
+                        <p
+                          className={`text-[11px] line-clamp-1 ${
+                            isLightMode ? 'text-zinc-500' : 'text-zinc-400'
+                          }`}
+                        >
+                          {item.subtitle}
+                        </p>
                       </div>
                     </div>
 
                     {isSelected && (
-                      <span className="text-[10px] text-purple-300 font-mono flex items-center gap-1">
+                      <span
+                        className={`text-[10px] font-mono flex items-center gap-1 ${
+                          isLightMode ? 'text-purple-700' : 'text-purple-300'
+                        }`}
+                      >
                         Öffnen <ArrowRight className="w-3 h-3" />
                       </span>
                     )}
@@ -360,7 +419,13 @@ export const Spotlight: React.FC = () => {
           </div>
 
           {/* Footer Shortcuts */}
-          <div className="h-8 bg-[#0e0e14] border-t border-[#27272a]/60 px-4 flex items-center justify-between text-[10px] text-zinc-500 font-mono">
+          <div
+            className={`h-8 border-t px-4 flex items-center justify-between text-[10px] font-mono ${
+              isLightMode
+                ? 'bg-slate-100 border-slate-200 text-zinc-600'
+                : 'bg-[#0e0e14] border-[#27272a]/60 text-zinc-500'
+            }`}
+          >
             <span>↑↓ Navigation</span>
             <span>↵ Auswählen</span>
             <span>Obsidian Core Index</span>

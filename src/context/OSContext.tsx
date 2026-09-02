@@ -23,6 +23,12 @@ const DEFAULT_USERS: UserProfile[] = [];
 const DEFAULT_SETTINGS: PersonalizationSettings = {
   themeMode: 'dark',
   glassOpacity: 65,
+  glassContrast: 'auto',
+  iconStyle: 'auto',
+  iconGlassOpacity: 55,
+  iconGlassBlur: 20,
+  iconRadius: 'rounded-2xl',
+  iconGlow: true,
   wallpaper: 'obsidian-deep',
   accentColor: 'violet-classic',
   desktopWallpaperMode: 'shader',
@@ -105,6 +111,10 @@ interface OSContextType {
   // System State & Time
   systemBootTime: number;
   effectiveTheme: 'dark' | 'light' | 'glassy';
+  effectiveGlassContrast: 'dark' | 'light';
+  isLight: boolean;
+  isDark: boolean;
+  isGlassy: boolean;
 
   // Auth & Multi-User
   users: UserProfile[];
@@ -620,6 +630,45 @@ export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
     return 'dark';
   }, [settings.themeMode]);
+
+  const isLight = effectiveTheme === 'light';
+  const isDark = effectiveTheme === 'dark';
+  const isGlassy = effectiveTheme === 'glassy';
+
+  const effectiveGlassContrast = useMemo<'dark' | 'light'>(() => {
+    if (settings.glassContrast === 'dark') return 'dark';
+    if (settings.glassContrast === 'light') return 'light';
+
+    // Auto calculation:
+    if (isLight) return 'dark';
+    if (isDark) return 'light';
+
+    // In Glassy Mode: inspect active wallpaper
+    const isPhoto = settings.desktopWallpaperMode === 'photo' || settings.desktopWallpaperMode === 'random_photo';
+    const photoId = settings.desktopPhotoId || '';
+    const brightPhotos = [
+      'photo-dolomites',
+      'photo-pacific-fog',
+      'photo-sahara',
+      'photo-alps',
+      'photo-snow',
+      'photo-white-sand',
+    ];
+    if (isPhoto && brightPhotos.some((bp) => photoId.includes(bp))) {
+      return 'dark';
+    }
+    if (settings.wallpaper === 'mesh-aurora' || settings.wallpaper === 'gradient-sunset') {
+      return 'dark';
+    }
+    return 'light';
+  }, [
+    settings.glassContrast,
+    isLight,
+    isDark,
+    settings.desktopWallpaperMode,
+    settings.desktopPhotoId,
+    settings.wallpaper,
+  ]);
 
   // Global Keyboard shortcuts (Spotlight Cmd+Space / Ctrl+Space)
   useEffect(() => {
@@ -1858,6 +1907,10 @@ export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const value: OSContextType = {
     systemBootTime,
     effectiveTheme,
+    effectiveGlassContrast,
+    isLight,
+    isDark,
+    isGlassy,
     users,
     currentUser,
     isLocked,
