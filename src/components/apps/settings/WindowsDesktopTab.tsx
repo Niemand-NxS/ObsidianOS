@@ -1,9 +1,20 @@
 import React from 'react';
 import { useOS } from '../../../context/OSContext';
-import { Layout, Maximize2, Sparkles, Clock, Move, Layers } from 'lucide-react';
+import { Layout, Maximize2, Sparkles, Clock, Move, Layers, Monitor, Plus, Check, Trash2 } from 'lucide-react';
+import { APPS_REGISTRY } from '../../../config/themeConfig';
 
 export const WindowsDesktopTab: React.FC = () => {
-  const { settings, updateSettings, accentConfig, sounds } = useOS();
+  const {
+    settings,
+    updateSettings,
+    accentConfig,
+    sounds,
+    isAppOnDesktop,
+    toggleAppOnDesktop,
+    addAppToDesktop,
+    removeAppFromDesktop,
+    customApps,
+  } = useOS();
 
   const shadowOptions = [
     { id: 'none', label: 'Keine', desc: 'Flacher Look ohne Schlagschatten' },
@@ -263,6 +274,84 @@ export const WindowsDesktopTab: React.FC = () => {
               }`}
             />
           </button>
+        </div>
+      </div>
+
+      {/* 5. Desktop App Icons Management */}
+      <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-xs font-semibold text-zinc-300 uppercase tracking-wider block flex items-center gap-1.5">
+              <Monitor className="w-3.5 h-3.5 text-purple-400" />
+              <span>Schreibtisch-Apps verwalten (Desktop-Symbole)</span>
+            </label>
+            <p className="text-[11px] text-zinc-400 mt-0.5">
+              Wähle, welche Anwendungen direkt auf deinem Schreibtisch angezeigt werden. Alle weiteren Apps sind jederzeit über Spotlight (⌘ + Leertaste) aufrufbar.
+            </p>
+          </div>
+          <span className="text-xs font-mono text-purple-300 bg-purple-500/10 border border-purple-500/20 px-2 py-0.5 rounded-lg">
+            {(settings.desktopPinnedAppIds ?? ['files', 'browser', 'notes', 'gallery', 'music', 'settings']).length} aktiv
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto pr-1">
+          {APPS_REGISTRY.map((app) => {
+            const isPinned = isAppOnDesktop(app.id);
+            return (
+              <div
+                key={app.id}
+                className={`p-2.5 rounded-xl border flex items-center justify-between transition-all ${
+                  isPinned
+                    ? 'bg-purple-500/10 border-purple-500/30 text-white'
+                    : 'bg-white/[0.02] border-white/5 text-zinc-400 hover:bg-white/[0.04]'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                      isPinned ? 'bg-purple-600/30 text-purple-200' : 'bg-white/5 text-zinc-400'
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-xs font-semibold text-zinc-200 block truncate">
+                      {app.name}
+                    </span>
+                    <span className="text-[10px] text-zinc-500 block truncate">
+                      {app.category}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleAppOnDesktop(app.id);
+                    sounds.playClick();
+                  }}
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all shrink-0 flex items-center gap-1 ${
+                    isPinned
+                      ? 'bg-emerald-500/20 text-emerald-300 hover:bg-red-500/20 hover:text-red-300 border border-emerald-500/30 hover:border-red-500/30'
+                      : 'bg-white/10 text-zinc-300 hover:bg-purple-600 hover:text-white border border-white/10'
+                  }`}
+                  title={isPinned ? 'Vom Schreibtisch entfernen' : 'Auf den Schreibtisch legen'}
+                >
+                  {isPinned ? (
+                    <>
+                      <Check className="w-3 h-3" />
+                      <span>Aktiv</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-3 h-3" />
+                      <span>Hinzufügen</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

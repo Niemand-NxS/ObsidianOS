@@ -167,6 +167,7 @@ const DesktopContent: React.FC = () => {
     effectiveTheme,
     effectiveGlassContrast,
     isLight,
+    addAppToDesktop,
   } = useOS();
 
   const [selectedQuickApp, setSelectedQuickApp] = useState<{
@@ -194,24 +195,33 @@ const DesktopContent: React.FC = () => {
     hasMoved: boolean;
   } | null>(null);
 
-  // Derive visible desktop apps: Preinstalled + Installed from Store + Custom AI apps
-  const visibleDesktopApps: AppMetadata[] = [
-    ...APPS_REGISTRY.filter(
-      (app) => app.isPreinstalled || installedAppIds.includes(app.id)
-    ),
-    ...customApps.map((ca) => ({
-      id: ca.id,
-      name: ca.name,
-      category: 'Entwicklung' as const,
-      iconName: ca.icon || 'Sparkles',
-      description: 'Benutzerdefinierte KI-Anwendung',
-      defaultWidth: 860,
-      defaultHeight: 580,
-      minWidth: 500,
-      minHeight: 400,
-      isPreinstalled: false,
-    })),
-  ];
+  // Derive all candidate apps: Preinstalled + Installed from Store + Custom AI apps
+  const allCandidateApps: AppMetadata[] = React.useMemo(
+    () => [
+      ...APPS_REGISTRY.filter(
+        (app) => app.isPreinstalled || installedAppIds.includes(app.id)
+      ),
+      ...customApps.map((ca) => ({
+        id: ca.id,
+        name: ca.name,
+        category: 'Entwicklung' as const,
+        iconName: ca.icon || 'Sparkles',
+        description: 'Benutzerdefinierte KI-Anwendung',
+        defaultWidth: 860,
+        defaultHeight: 580,
+        minWidth: 500,
+        minHeight: 400,
+        isPreinstalled: false,
+      })),
+    ],
+    [installedAppIds, customApps]
+  );
+
+  // Filter visible desktop apps: Only show main/pinned apps by default, other apps accessed via Spotlight or Settings
+  const visibleDesktopApps: AppMetadata[] = React.useMemo(() => {
+    const pinned = settings.desktopPinnedAppIds ?? ['files', 'browser', 'notes', 'gallery', 'music', 'settings'];
+    return allCandidateApps.filter((app) => pinned.includes(app.id));
+  }, [allCandidateApps, settings.desktopPinnedAppIds]);
 
   // Resolve active Icon Appearance
   const resolvedIconStyle = React.useMemo(() => {
@@ -329,25 +339,59 @@ const DesktopContent: React.FC = () => {
       {/* 1. Global Wallpaper Layer (Supports Real Unsplash 4K Photos & WebGL Shaders) */}
       <Wallpaper />
 
-      {/* 2. Top System Bar with unlock slide-down entrance */}
-      <motion.div
-        initial={{ y: -30, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
-        className="relative z-40"
-      >
-        <TopBar />
-      </motion.div>
+      {/* Desktop Workspace & Subsystems - Only rendered once Setup Assistant is completed */}
+      {isSetupCompleted && (
+        <motion.div
+          key="desktop-workspace-container"
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          className="contents"
+        >
+          {/* 2. Top System Bar with unlock slide-down entrance */}
+          <motion.div
+            initial={{ y: -30, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+            className="relative z-40"
+          >
+            <TopBar />
+          </motion.div>
 
-      {/* 3. Floating Desktop Glance Widget mirroring Lockscreen aesthetic */}
-      <DesktopGlance />
+          {/* 3. Floating Desktop Glance Widget mirroring Lockscreen aesthetic */}
+          <DesktopGlance />
 
-      {/* 4. Desktop Main Workspace & Icon Grid */}
-      <main
-        id="desktop-main-workspace"
-        className="absolute inset-0 pt-8 pb-24 overflow-hidden z-10"
-        onClick={() => setSelectedQuickApp(null)}
-      >
+          {/* 4. Desktop Main Workspace & Icon Grid */}
+          <main
+            id="desktop-main-workspace"
+            className="absolute inset-0 pt-8 pb-24 overflow-hidden z-10"
+            onClick={() => setSelectedQuickApp(null)}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'copy';
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              const droppedAppId =
+                e.dataTransfer.getData('application/obsidian-app') ||
+                e.dataTransfer.getData('text/plain');
+              if (droppedAppId) {
+                addAppToDesktop(droppedAppId);
+                const rect = e.currentTarget.getBoundingClientRect();
+                const dropX = e.clientX - rect.left - 40;
+                const dropY = e.clientY - rect.top - 40;
+                const snapped = snapToRasterGrid(
+                  Math.max(20, dropX),
+                  Math.max(30, dropY),
+                  cellW,
+                  cellH,
+                  widgetBounds
+                );
+                updateIconPosition(droppedAppId, snapped.x, snapped.y);
+                sounds.playDrop();
+              }
+            }}
+          >
         {/* Realtime Snap Target Raster Ghost Box */}
         <AnimatePresence>
           {iconSnapPreview && draggingAppId && (
@@ -608,20 +652,22 @@ const DesktopContent: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Window Manager Layer */}
-      <div id="windows-layer" className="absolute inset-0 pointer-events-none z-30">
-        {windows.map((win) => (
-          <div key={win.id} className="pointer-events-auto">
-            <Window win={win} />
+          {/* Window Manager Layer */}
+          <div id="windows-layer" className="absolute inset-0 pointer-events-none z-30">
+            {windows.map((win) => (
+              <div key={win.id} className="pointer-events-auto">
+                <Window win={win} />
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
 
-      {/* Global Spotlight Search Overlay (Cmd+Space) */}
-      <Spotlight />
+          {/* Global Spotlight Search Overlay (Cmd+Space) */}
+          <Spotlight />
 
-      {/* Control Center Panel */}
-      <ControlCenter />
+          {/* Control Center Panel */}
+          <ControlCenter />
+        </motion.div>
+      )}
 
       {/* Lock Screen with Cinematic Unlock Exit Animation */}
       <AnimatePresence mode="wait">

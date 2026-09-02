@@ -42,6 +42,7 @@ const DEFAULT_SETTINGS: PersonalizationSettings = {
   desktopGridSpacing: 'comfortable',
   desktopShowIconLabels: true,
   desktopIconClickMode: 'double',
+  desktopPinnedAppIds: ['files', 'browser', 'notes', 'gallery', 'music', 'settings'],
   lockscreenMode: 'random_photo',
   lockscreenShaderId: 'shader-obsidian',
   lockscreenCategory: 'all',
@@ -186,9 +187,15 @@ interface OSContextType {
   exportEncryptedVault: () => Promise<void>;
   importEncryptedVault: (file: File, passphrase: string) => Promise<boolean>;
 
-  // Desktop icon positions
+  // Desktop icon positions & pinned apps
   iconPositions: Record<string, { x: number; y: number }>;
   updateIconPosition: (id: string, x: number, y: number) => void;
+  desktopPinnedAppIds: string[];
+  addAppToDesktop: (appId: string) => void;
+  removeAppFromDesktop: (appId: string) => void;
+  toggleAppOnDesktop: (appId: string) => void;
+  isAppOnDesktop: (appId: string) => boolean;
+  restoreFullBackup: (backupObject: any) => Promise<boolean>;
 
   // Recent apps (5 most recent in Dock)
   recentApps: AppId[];
@@ -1004,6 +1011,120 @@ export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   const updateSettings = useCallback((updates: Partial<PersonalizationSettings>) => {
     setSettings((prev) => ({ ...prev, ...updates }));
   }, []);
+
+  const desktopPinnedAppIds = useMemo(() => {
+    return settings.desktopPinnedAppIds && settings.desktopPinnedAppIds.length > 0
+      ? settings.desktopPinnedAppIds
+      : ['files', 'browser', 'notes', 'gallery', 'music', 'settings'];
+  }, [settings.desktopPinnedAppIds]);
+
+  const isAppOnDesktop = useCallback(
+    (appId: string) => {
+      return desktopPinnedAppIds.includes(appId);
+    },
+    [desktopPinnedAppIds]
+  );
+
+  const addAppToDesktop = useCallback(
+    (appId: string) => {
+      if (desktopPinnedAppIds.includes(appId)) return;
+      const next = [...desktopPinnedAppIds, appId];
+      updateSettings({ desktopPinnedAppIds: next });
+      sounds.playClick();
+      const meta = APPS_REGISTRY.find((a) => a.id === appId);
+      addNotification(
+        'App hinzugefügt',
+        `"${meta?.name || appId}" befindet sich nun auf deinem Schreibtisch.`,
+        'success',
+        'Schreibtisch'
+      );
+    },
+    [desktopPinnedAppIds, updateSettings, sounds, addNotification]
+  );
+
+  const removeAppFromDesktop = useCallback(
+    (appId: string) => {
+      const next = desktopPinnedAppIds.filter((id) => id !== appId);
+      updateSettings({ desktopPinnedAppIds: next });
+      sounds.playClose();
+      const meta = APPS_REGISTRY.find((a) => a.id === appId);
+      addNotification(
+        'App entfernt',
+        `"${meta?.name || appId}" wurde vom Schreibtisch entfernt (bleibt über Spotlight verfügbar).`,
+        'info',
+        'Schreibtisch'
+      );
+    },
+    [desktopPinnedAppIds, updateSettings, sounds, addNotification]
+  );
+
+  const toggleAppOnDesktop = useCallback(
+    (appId: string) => {
+      if (isAppOnDesktop(appId)) {
+        removeAppFromDesktop(appId);
+      } else {
+        addAppToDesktop(appId);
+      }
+    },
+    [isAppOnDesktop, addAppToDesktop, removeAppFromDesktop]
+  );
+
+  const restoreFullBackup = useCallback(
+    async (backupObject: any): Promise<boolean> => {
+      if (!backupObject || (!backupObject.data && !backupObject.version)) {
+        return false;
+      }
+      try {
+        const data = backupObject.data || backupObject;
+        Object.entries(data).forEach(([k, val]) => {
+          if (typeof val === 'object') {
+            localStorage.setItem(k, JSON.stringify(val));
+          } else {
+            localStorage.setItem(k, String(val));
+          }
+        });
+
+        if (data.obsidian_settings) {
+          setSettings((prev) => ({ ...prev, ...data.obsidian_settings }));
+        }
+        if (data.obsidian_files) {
+          setFiles(data.obsidian_files);
+        }
+        if (data.obsidian_users && Array.isArray(data.obsidian_users) && data.obsidian_users.length > 0) {
+          setUsers(data.obsidian_users);
+          setCurrentUser(data.obsidian_users[0]);
+          CookieStorage.markSetupCompleted(data.obsidian_users[0].id);
+        }
+        if (data.obsidian_icon_positions) {
+          setIconPositions(data.obsidian_icon_positions);
+        }
+        if (data.obsidian_installed_apps) {
+          setInstalledAppIds(data.obsidian_installed_apps);
+        }
+        if (data.obsidian_custom_apps) {
+          setCustomApps(data.obsidian_custom_apps);
+        }
+        if (data.obsidian_recent_apps) {
+          setRecentApps(data.obsidian_recent_apps);
+        }
+
+        setIsSetupCompleted(true);
+        setIsLocked(false);
+        sounds.playSuccess();
+        addNotification(
+          'Time Machine Backup wiederhergestellt',
+          'Alle Systemdateien, Einstellungen und Profile wurden erfolgreich geladen.',
+          'success',
+          'System'
+        );
+        return true;
+      } catch (err) {
+        console.error('Failed to restore backup', err);
+        return false;
+      }
+    },
+    [sounds, addNotification]
+  );
 
   // Window Management
   const focusWindow = useCallback(
@@ -1967,6 +2088,12 @@ export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
     iconPositions,
     updateIconPosition,
+    desktopPinnedAppIds,
+    addAppToDesktop,
+    removeAppFromDesktop,
+    toggleAppOnDesktop,
+    isAppOnDesktop,
+    restoreFullBackup,
     recentApps,
 
     installedAppIds,

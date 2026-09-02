@@ -40,6 +40,8 @@ export const Spotlight: React.FC = () => {
     effectiveTheme,
     effectiveGlassContrast,
     isLight,
+    addAppToDesktop,
+    isAppOnDesktop,
   } = useOS();
 
   const isLightMode = isLight || effectiveGlassContrast === 'dark';
@@ -102,6 +104,7 @@ export const Spotlight: React.FC = () => {
       if (!q || app.name.toLowerCase().includes(q) || app.description.toLowerCase().includes(q)) {
         items.push({
           id: `app-${app.id}`,
+          appId: app.id,
           title: app.name,
           subtitle: app.description,
           category: 'App',
@@ -351,9 +354,20 @@ export const Spotlight: React.FC = () => {
             ) : (
               results.map((item, idx) => {
                 const isSelected = idx === selectedIndex;
+                const isApp = item.category === 'App' && item.appId;
+                const onDesktop = isApp ? isAppOnDesktop(item.appId!) : false;
+
                 return (
                   <div
                     key={item.id}
+                    draggable={Boolean(isApp)}
+                    onDragStart={(e) => {
+                      if (isApp && item.appId) {
+                        e.dataTransfer.setData('text/plain', item.appId);
+                        e.dataTransfer.setData('application/obsidian-app', item.appId);
+                        sounds.playClick();
+                      }
+                    }}
                     onClick={() => item.action()}
                     onMouseEnter={() => setSelectedIndex(idx)}
                     className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${
@@ -366,9 +380,9 @@ export const Spotlight: React.FC = () => {
                         : 'hover:bg-[#181824] border border-transparent'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
                       <div
-                        className={`w-8 h-8 rounded-xl border flex items-center justify-center ${
+                        className={`w-8 h-8 rounded-xl border flex items-center justify-center shrink-0 ${
                           isLightMode
                             ? 'bg-slate-100 border-slate-300'
                             : 'bg-[#1a1a26] border-[#2e2e3e]'
@@ -376,15 +390,15 @@ export const Spotlight: React.FC = () => {
                       >
                         {getIcon(item.icon)}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p
                           className={`text-xs font-bold flex items-center gap-2 ${
                             isLightMode ? 'text-zinc-900' : 'text-white'
                           }`}
                         >
-                          {item.title}
+                          <span className="truncate">{item.title}</span>
                           <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded font-normal ${
+                            className={`text-[10px] px-1.5 py-0.5 rounded font-normal shrink-0 ${
                               isLightMode
                                 ? 'bg-black/[0.06] text-zinc-600'
                                 : 'bg-white/5 text-zinc-400'
@@ -394,7 +408,7 @@ export const Spotlight: React.FC = () => {
                           </span>
                         </p>
                         <p
-                          className={`text-[11px] line-clamp-1 ${
+                          className={`text-[11px] truncate ${
                             isLightMode ? 'text-zinc-500' : 'text-zinc-400'
                           }`}
                         >
@@ -403,15 +417,39 @@ export const Spotlight: React.FC = () => {
                       </div>
                     </div>
 
-                    {isSelected && (
-                      <span
-                        className={`text-[10px] font-mono flex items-center gap-1 ${
-                          isLightMode ? 'text-purple-700' : 'text-purple-300'
-                        }`}
-                      >
-                        Öffnen <ArrowRight className="w-3 h-3" />
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isApp && item.appId && (
+                        <div onClick={(e) => e.stopPropagation()}>
+                          {onDesktop ? (
+                            <span className="text-[10px] font-medium text-emerald-400 bg-emerald-500/15 border border-emerald-500/25 px-2 py-0.5 rounded-md">
+                              Auf Schreibtisch
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                addAppToDesktop(item.appId!);
+                                sounds.playSuccess();
+                              }}
+                              className="px-2 py-1 rounded-lg bg-purple-600/30 hover:bg-purple-600 text-purple-200 hover:text-white border border-purple-500/40 text-[10px] font-semibold transition-all shadow-sm flex items-center gap-1"
+                              title="Auf den Schreibtisch pinnen (oder ziehen)"
+                            >
+                              <span>+ Schreibtisch</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+
+                      {isSelected && (
+                        <span
+                          className={`text-[10px] font-mono flex items-center gap-1 ${
+                            isLightMode ? 'text-purple-700' : 'text-purple-300'
+                          }`}
+                        >
+                          Öffnen <ArrowRight className="w-3 h-3" />
+                        </span>
+                      )}
+                    </div>
                   </div>
                 );
               })

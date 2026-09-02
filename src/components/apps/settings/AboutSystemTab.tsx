@@ -3,7 +3,7 @@ import { useOS } from '../../../context/OSContext';
 import { Cpu, Sparkles, Terminal, Activity, Layers, Heart, Globe, ShieldCheck } from 'lucide-react';
 
 export const AboutSystemTab: React.FC = () => {
-  const { accentConfig, systemBootTime } = useOS();
+  const { accentConfig, systemBootTime, openSetupAssistant, sounds } = useOS();
   const [uptimeSeconds, setUptimeSeconds] = useState(() =>
     Math.max(0, Math.floor((Date.now() - systemBootTime) / 1000))
   );
@@ -114,7 +114,28 @@ export const AboutSystemTab: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Developer Credits */}
+      {/* 4. Setup Assistant Re-run */}
+      <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-between">
+        <div>
+          <h4 className="text-xs font-bold text-purple-200">ObsidianOS Setup-Assistent</h4>
+          <p className="text-[11px] text-purple-300/70">
+            Starte den 8-stufigen Ersteinrichtungs-Assistenten erneut zur Rekonfiguration.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            sounds.playClick();
+            openSetupAssistant();
+          }}
+          className="px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Assistent öffnen</span>
+        </button>
+      </div>
+
+      {/* 5. Developer Credits */}
       <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-2 text-xs">
         <div className="flex items-center gap-2 text-zinc-300 font-semibold">
           <Heart className="w-4 h-4 text-rose-500 fill-rose-500" />

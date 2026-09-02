@@ -266,6 +266,7 @@ export interface PersonalizationSettings {
   desktopGridSpacing?: DesktopGridSpacing;
   desktopShowIconLabels?: boolean;
   desktopIconClickMode?: 'double' | 'single';
+  desktopPinnedAppIds?: string[]; // IDs of apps explicitly pinned to the home screen
   lockscreenMode?: LockscreenWallpaperMode;
   lockscreenShaderId?: WallpaperId;
   lockscreenCategory?: LockscreenCategory;
@@ -404,6 +405,7 @@ export interface SpotlightItem {
   action: () => void;
   keywords?: string[];
   shortcut?: string;
+  appId?: string;
 }
 
 export interface SystemNotification {

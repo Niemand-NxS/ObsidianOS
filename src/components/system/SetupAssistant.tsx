@@ -3,31 +3,35 @@ import { useOS } from '../../context/OSContext';
 import { AVATAR_PRESETS } from '../../config/avatarPresets';
 import { ACCENT_COLORS, WALLPAPERS } from '../../config/themeConfig';
 import {
-  Sparkles,
+  Globe,
+  Accessibility,
+  Wifi,
+  Laptop,
   User,
-  Shield,
+  Eye,
+  ShieldCheck,
   Palette,
-  Sliders,
   Check,
   ArrowRight,
   ArrowLeft,
   Lock,
-  Eye,
   EyeOff,
-  Globe,
-  Camera,
-  Upload,
-  CheckCircle2,
+  Sparkles,
   RefreshCw,
   LogIn,
-  KeyRound,
-  Laptop,
-  Moon,
-  Sun,
-  Volume2,
+  Sliders,
+  Camera,
+  Mic,
+  MapPin,
   Clock,
   HardDrive,
-  Info,
+  CheckCircle2,
+  Volume2,
+  FileText,
+  AlertCircle,
+  Scan,
+  Radio,
+  Share2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { sounds } from '../../services/soundService';
@@ -38,7 +42,28 @@ interface SetupAssistantProps {
   onComplete?: () => void;
 }
 
-type SetupStep = 'welcome' | 'account' | 'appearance' | 'system' | 'finish';
+// 8 Defined Steps according to specification
+type SetupStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+
+interface CountryConfig {
+  id: string;
+  name: string;
+  flag: string;
+  lang: 'de' | 'en' | 'fr';
+  kb: 'de' | 'us' | 'ch';
+  currency: string;
+  units: 'metric' | 'imperial';
+  dateFormat: string;
+}
+
+const COUNTRIES: CountryConfig[] = [
+  { id: 'de', name: 'Deutschland', flag: '🇩🇪', lang: 'de', kb: 'de', currency: 'EUR (€)', units: 'metric', dateFormat: 'TT.MM.JJJJ' },
+  { id: 'at', name: 'Österreich', flag: '🇦🇹', lang: 'de', kb: 'de', currency: 'EUR (€)', units: 'metric', dateFormat: 'TT.MM.JJJJ' },
+  { id: 'ch', name: 'Schweiz', flag: '🇨🇭', lang: 'de', kb: 'ch', currency: 'CHF (Fr.)', units: 'metric', dateFormat: 'TT.MM.JJJJ' },
+  { id: 'us', name: 'Vereinigte Staaten', flag: '🇺🇸', lang: 'en', kb: 'us', currency: 'USD ($)', units: 'imperial', dateFormat: 'MM/DD/YYYY' },
+  { id: 'gb', name: 'Großbritannien', flag: '🇬🇧', lang: 'en', kb: 'us', currency: 'GBP (£)', units: 'metric', dateFormat: 'DD/MM/YYYY' },
+  { id: 'fr', name: 'Frankreich', flag: '🇫🇷', lang: 'fr', kb: 'de', currency: 'EUR (€)', units: 'metric', dateFormat: 'JJ/MM/AAAA' },
+];
 
 export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) => {
   const {
@@ -47,135 +72,242 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
     users,
     accentConfig,
     settings,
-    updateSettings,
   } = useOS();
 
-  const [currentStep, setCurrentStep] = useState<SetupStep>('welcome');
+  const [currentStep, setCurrentStep] = useState<SetupStep>(1);
+
+  // Synced cloud accounts list for direct login or migration
+  const [cloudUsers, setCloudUsers] = useState<UserProfile[]>(users);
   const [isDirectLoginOpen, setIsDirectLoginOpen] = useState(false);
   const [directLoginUserId, setDirectLoginUserId] = useState<string>('');
-  const [directLoginUsername, setDirectLoginUsername] = useState<string>('');
   const [directLoginPin, setDirectLoginPin] = useState<string>('');
   const [directLoginError, setDirectLoginError] = useState<string>('');
   const [isDirectLoggingIn, setIsDirectLoggingIn] = useState(false);
 
-  // Synced cloud accounts list for direct login
-  const [cloudUsers, setCloudUsers] = useState<UserProfile[]>(users);
-  const [isLoadingCloudUsers, setIsLoadingCloudUsers] = useState(false);
-
-  // Step 1: Language & Region
-  const [language, setLanguage] = useState<'de' | 'en' | 'fr'>('de');
+  // -------------------------------------------------------------
+  // STEP 1: Land, Region & Tastatur
+  // -------------------------------------------------------------
+  const [selectedCountry, setSelectedCountry] = useState<CountryConfig>(COUNTRIES[0]);
+  const [primaryLang, setPrimaryLang] = useState<'de' | 'en' | 'fr'>('de');
   const [keyboardLayout, setKeyboardLayout] = useState<'de' | 'us' | 'ch'>('de');
+  const [dictationEnabled, setDictationEnabled] = useState(true);
 
-  // Step 2: User Profile State
-  const [displayName, setDisplayName] = useState('');
-  const [username, setUsername] = useState('');
-  const [pin, setPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
-  const [showPin, setShowPin] = useState(false);
-  const [role, setRole] = useState<'Administrator' | 'Benutzer'>('Administrator');
-  const [bio, setBio] = useState('ObsidianOS Hauptbenutzer');
+  // Update language/keyboard on country change
+  const handleSelectCountry = (country: CountryConfig) => {
+    sounds.playClick();
+    setSelectedCountry(country);
+    setPrimaryLang(country.lang);
+    setKeyboardLayout(country.kb);
+  };
+
+  // -------------------------------------------------------------
+  // STEP 2: Barrierefreiheit (Eingabe- und Sehhilfen)
+  // -------------------------------------------------------------
+  const [voiceOver, setVoiceOver] = useState(false);
+  const [screenZoom, setScreenZoom] = useState(false);
+  const [largeText, setLargeText] = useState(false);
+  const [switchControl, setSwitchControl] = useState(false);
+  const [liveCaptions, setLiveCaptions] = useState(false);
+  const [flashAlerts, setFlashAlerts] = useState(false);
+
+  // -------------------------------------------------------------
+  // STEP 3: Netzwerkverbindung (Internet & Infrastruktur)
+  // -------------------------------------------------------------
+  const [detectedWifiName, setDetectedWifiName] = useState<string>('Home_WLAN_5GHz');
+  const [selectedNetwork, setSelectedNetwork] = useState<string>('Home_WLAN_5GHz');
+  const [networkPassword, setNetworkPassword] = useState<string>('••••••••');
+  const [networkStatus, setNetworkStatus] = useState<'connected' | 'connecting' | 'idle'>('connected');
+  const [connectionType, setConnectionType] = useState<'wifi' | 'ethernet'>('wifi');
+
+  useEffect(() => {
+    // Attempt to probe network info if available in browser
+    try {
+      const nav = navigator as any;
+      const conn = nav.connection || nav.mozConnection || nav.webkitConnection;
+      if (conn && conn.effectiveType) {
+        setDetectedWifiName(`WLAN_${conn.effectiveType.toUpperCase()}_HighSpeed`);
+        setSelectedNetwork(`WLAN_${conn.effectiveType.toUpperCase()}_HighSpeed`);
+      } else if (navigator.onLine) {
+        setDetectedWifiName('Fritz!Box-7590-AX (Online)');
+        setSelectedNetwork('Fritz!Box-7590-AX (Online)');
+      }
+    } catch {}
+  }, []);
+
+  const handleTestConnect = () => {
+    sounds.playClick();
+    setNetworkStatus('connecting');
+    setTimeout(() => {
+      setNetworkStatus('connected');
+      sounds.playSuccess();
+    }, 900);
+  };
+
+  // -------------------------------------------------------------
+  // STEP 4: Datenübertragung (Migrationsassistent)
+  // -------------------------------------------------------------
+  type MigrationMode = 'cloud_account' | 'time_machine' | 'none';
+  const [migrationMode, setMigrationMode] = useState<MigrationMode>('none');
+
+  // -------------------------------------------------------------
+  // STEP 5: Konto & Authentifizierung
+  // -------------------------------------------------------------
+  const [accountMode, setAccountMode] = useState<'create' | 'existing'>('create');
+  const [fullName, setFullName] = useState('');
+  const [accountName, setAccountName] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordHint, setPasswordHint] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(true);
   const [selectedAvatar, setSelectedAvatar] = useState(AVATAR_PRESETS[0].url);
-  const [customAvatarUrl, setCustomAvatarUrl] = useState('');
-  const [avatarTab, setAvatarTab] = useState<'presets' | 'custom'>('presets');
-  const [userFormError, setUserFormError] = useState('');
+  const [formError, setFormError] = useState('');
 
-  // Step 3: Appearance State
-  const [themeMode, setThemeMode] = useState<'shader' | 'photo'>('shader');
+  // Auto-generate short account name (e.g. "Lia Clu" -> "liaclu")
+  const handleFullNameChange = (val: string) => {
+    setFullName(val);
+    const slug = val
+      .toLowerCase()
+      .replace(/[äÄ]/g, 'ae')
+      .replace(/[öÖ]/g, 'oe')
+      .replace(/[üÜ]/g, 'ue')
+      .replace(/[ß]/g, 'ss')
+      .replace(/[^a-z0-9]/g, '');
+    setAccountName(slug);
+  };
+
+  // -------------------------------------------------------------
+  // STEP 6: Sicherheit & Verschlüsselung (Optic ID)
+  // -------------------------------------------------------------
+  const [opticIdStatus, setOpticIdStatus] = useState<'idle' | 'scanning' | 'completed' | 'skipped'>('idle');
+  const [scanProgress, setScanProgress] = useState(0);
+
+  const handleStartOpticScan = () => {
+    sounds.playClick();
+    setOpticIdStatus('scanning');
+    setScanProgress(0);
+
+    let current = 0;
+    const interval = setInterval(() => {
+      current += 8;
+      if (current >= 100) {
+        current = 100;
+        clearInterval(interval);
+        setScanProgress(100);
+        setOpticIdStatus('completed');
+        sounds.playSuccess();
+      } else {
+        setScanProgress(current);
+      }
+    }, 120);
+  };
+
+  // -------------------------------------------------------------
+  // STEP 7: Ortung, Diagnose & Dienste
+  // -------------------------------------------------------------
+  const [locationServices, setLocationServices] = useState(true);
+  const [cameraMicProtection, setCameraMicProtection] = useState(true);
+  const [screenTimeSync, setScreenTimeSync] = useState(true);
+  const [diagnosticReports, setDiagnosticReports] = useState(true);
+
+  // -------------------------------------------------------------
+  // STEP 8: Personalisierung & Finale
+  // -------------------------------------------------------------
+  const [themeMode, setThemeMode] = useState<'dark' | 'light' | 'glassy' | 'auto'>('glassy');
   const [selectedAccent, setSelectedAccent] = useState<AccentColorId>('violet-classic');
   const [selectedWallpaper, setSelectedWallpaper] = useState<WallpaperId>('obsidian-deep');
-
-  // Step 4: System & Desktop State
-  const [clockFont, setClockFont] = useState<ClockFont>('sans-ultralight');
-  const [clockFormat24h, setClockFormat24h] = useState(true);
-  const [clockShowSeconds, setClockShowSeconds] = useState(false);
-  const [dockMagnification, setDockMagnification] = useState(true);
-  const [soundEffects, setSoundEffects] = useState(true);
-
-  // Step 5: Finalizing state
   const [isFinalizing, setIsFinalizing] = useState(false);
 
   // Load cloud accounts for direct login
   useEffect(() => {
-    setIsLoadingCloudUsers(true);
-    FirebaseService.fetchUsersRegistry()
-      .then((res) => {
-        if (res.success && res.users && res.users.length > 0) {
-          setCloudUsers(res.users);
-          if (!directLoginUserId && res.users.length > 0) {
-            setDirectLoginUserId(res.users[0].id);
-          }
+    FirebaseService.fetchUsersRegistry().then((res) => {
+      if (res.success && res.users && res.users.length > 0) {
+        setCloudUsers(res.users);
+        if (!directLoginUserId) {
+          setDirectLoginUserId(res.users[0].id);
         }
-      })
-      .finally(() => {
-        setIsLoadingCloudUsers(false);
-      });
+      }
+    });
   }, []);
 
+  // Step Navigation Validation
   const handleNext = () => {
     sounds.playClick();
-    if (currentStep === 'welcome') {
-      setCurrentStep('account');
-    } else if (currentStep === 'account') {
-      if (!displayName.trim()) {
-        setUserFormError('Bitte gib einen vollständigen Namen oder Anzeigenamen ein.');
+    setFormError('');
+
+    if (currentStep === 1) {
+      setCurrentStep(2);
+    } else if (currentStep === 2) {
+      setCurrentStep(3);
+    } else if (currentStep === 3) {
+      setCurrentStep(4);
+    } else if (currentStep === 4) {
+      if (migrationMode === 'cloud_account' && cloudUsers.length > 0) {
+        setIsDirectLoginOpen(true);
         return;
       }
-      if (!username.trim()) {
-        setUserFormError('Bitte wähle einen Benutzernamen (@username).');
+      setCurrentStep(5);
+    } else if (currentStep === 5) {
+      if (!fullName.trim()) {
+        setFormError('Bitte gib deinen vollständigen Namen ein.');
+        sounds.playError();
         return;
       }
-      if (pin.length > 0 && pin.length < 4) {
-        setUserFormError('Die Sicherheits-PIN muss mindestens 4 Zeichen lang sein.');
+      if (!accountName.trim()) {
+        setFormError('Bitte gib einen Kurznamen für den Benutzerordner an.');
+        sounds.playError();
         return;
       }
-      if (pin !== confirmPin) {
-        setUserFormError('Die PIN-Bestätigung stimmt nicht überein.');
+      if (password.length > 0 && password.length < 4) {
+        setFormError('Das Passwort muss mindestens 4 Zeichen lang sein.');
+        sounds.playError();
         return;
       }
-      setUserFormError('');
-      setCurrentStep('appearance');
-    } else if (currentStep === 'appearance') {
-      setCurrentStep('system');
-    } else if (currentStep === 'system') {
-      setCurrentStep('finish');
+      if (password !== confirmPassword) {
+        setFormError('Die Passwort-Bestätigung stimmt nicht überein.');
+        sounds.playError();
+        return;
+      }
+      if (!termsAccepted) {
+        setFormError('Bitte akzeptiere die ObsidianOS Lizenzvereinbarung.');
+        sounds.playError();
+        return;
+      }
+      setCurrentStep(6);
+    } else if (currentStep === 6) {
+      setCurrentStep(7);
+    } else if (currentStep === 7) {
+      setCurrentStep(8);
     }
   };
 
   const handleBack = () => {
     sounds.playClick();
-    if (currentStep === 'account') setCurrentStep('welcome');
-    else if (currentStep === 'appearance') setCurrentStep('account');
-    else if (currentStep === 'system') setCurrentStep('appearance');
-    else if (currentStep === 'finish') setCurrentStep('system');
+    setFormError('');
+    if (currentStep > 1) {
+      setCurrentStep((prev) => (prev - 1) as SetupStep);
+    }
   };
 
   const handleLaunchOS = async () => {
     setIsFinalizing(true);
     sounds.playSuccess();
 
-    const avatarUrl = avatarTab === 'custom' && customAvatarUrl.trim()
-      ? customAvatarUrl.trim()
-      : selectedAvatar;
-
     try {
       await completeSetup(
         {
-          displayName: displayName.trim() || 'Benutzer',
-          username: username.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '') || 'admin',
-          pin: pin,
-          avatar: avatarUrl,
-          role: role,
-          bio: bio,
+          displayName: fullName.trim() || 'Obsidian Benutzer',
+          username: accountName.trim().toLowerCase() || 'user',
+          pin: password,
+          avatar: selectedAvatar,
+          role: 'Administrator',
+          bio: passwordHint ? `Hinweis: ${passwordHint}` : 'ObsidianOS Hauptbenutzer',
         },
         {
+          themeMode: themeMode,
           accentColor: selectedAccent,
           wallpaper: selectedWallpaper,
-          desktopWallpaperMode: themeMode,
-          clockFont: clockFont,
-          clockFormat24h: clockFormat24h,
-          clockShowSeconds: clockShowSeconds,
-          dockMagnification: dockMagnification,
-          soundEffects: soundEffects,
+          soundEffects: true,
         }
       );
       if (onComplete) onComplete();
@@ -184,27 +316,14 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
     }
   };
 
-  // Direct login execution
   const handleExecuteDirectLogin = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setDirectLoginError('');
     setIsDirectLoggingIn(true);
 
     try {
-      // Find selected user
-      let targetUserId = directLoginUserId;
-      if (!targetUserId && directLoginUsername) {
-        const found = cloudUsers.find(
-          (u) => u.username.toLowerCase() === directLoginUsername.trim().toLowerCase()
-        );
-        if (found) targetUserId = found.id;
-      }
-
-      if (!targetUserId && cloudUsers.length > 0) {
-        targetUserId = cloudUsers[0].id;
-      }
-
-      const success = await loginExistingAccount(targetUserId, directLoginPin);
+      const targetId = directLoginUserId || (cloudUsers[0] ? cloudUsers[0].id : '');
+      const success = await loginExistingAccount(targetId, directLoginPin);
       if (success) {
         sounds.playSuccess();
         if (onComplete) onComplete();
@@ -213,224 +332,602 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
         sounds.playError();
       }
     } catch (err: any) {
-      setDirectLoginError('Anmeldung fehlgeschlagen: ' + (err?.message || 'Unbekannter Fehler'));
+      setDirectLoginError('Anmeldung fehlgeschlagen: ' + (err?.message || 'Fehler'));
       sounds.playError();
     } finally {
       setIsDirectLoggingIn(false);
     }
   };
 
-  const stepsList: { id: SetupStep; title: string; icon: React.ReactNode }[] = [
-    { id: 'welcome', title: 'Sprache & Region', icon: <Globe className="w-4 h-4" /> },
-    { id: 'account', title: 'Account erstellen', icon: <User className="w-4 h-4" /> },
-    { id: 'appearance', title: 'Erscheinungsbild', icon: <Palette className="w-4 h-4" /> },
-    { id: 'system', title: 'System & Desktop', icon: <Sliders className="w-4 h-4" /> },
-    { id: 'finish', title: 'Bereitstellen', icon: <Sparkles className="w-4 h-4" /> },
-  ];
+  const stepTitles: Record<SetupStep, { title: string; subtitle: string }> = {
+    1: { title: 'Land, Region & Tastatur', subtitle: 'System-Lokalisierung und Eingabemethoden' },
+    2: { title: 'Barrierefreiheit', subtitle: 'Eingabe- und Sehhilfen konfigurieren' },
+    3: { title: 'Netzwerkverbindung', subtitle: 'Internet & Cloud-Infrastruktur verbinden' },
+    4: { title: 'Datenübertragung', subtitle: 'Migrationsassistent für Backups & Accounts' },
+    5: { title: 'Konto & Authentifizierung', subtitle: 'Computer-Account und Lizenzbedingungen' },
+    6: { title: 'Sicherheit & Verschlüsselung', subtitle: 'Optic ID Augenscan für biometrischen Login' },
+    7: { title: 'Ortung, Diagnose & Dienste', subtitle: 'Hintergrunddienste & Datenschutz' },
+    8: { title: 'Personalisierung & Finale', subtitle: 'UI-Erscheinungsbild und Systemstart' },
+  };
+
+  // Generic background image with blur and noise as specified
+  const genericBgUrl =
+    'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2560&auto=format&fit=crop';
+  const noiseSvgData =
+    "data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E";
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center p-4 sm:p-6 select-none bg-[#0c0d12]/95 backdrop-blur-3xl overflow-hidden font-sans">
-      {/* Dynamic Background Shader & Ambient Orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
-        <div
-          className="absolute -top-[20%] -left-[10%] w-[60vw] h-[60vw] rounded-full blur-[120px] mix-blend-screen animate-pulse"
-          style={{ backgroundColor: `${accentConfig.primary}44`, animationDuration: '8s' }}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 select-none overflow-hidden font-sans">
+      {/* Background: Generic selected image with blur and noise */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <img
+          src={genericBgUrl}
+          alt="Obsidian Background"
+          className="absolute inset-0 w-full h-full object-cover filter blur-[28px] scale-110 opacity-70"
         />
+        {/* Soft Noise Overlay Texture */}
         <div
-          className="absolute -bottom-[20%] -right-[10%] w-[60vw] h-[60vw] rounded-full blur-[140px] mix-blend-screen"
-          style={{ backgroundColor: `${accentConfig.glow}` }}
+          className="absolute inset-0 mix-blend-overlay opacity-30 pointer-events-none"
+          style={{ backgroundImage: `url("${noiseSvgData}")` }}
         />
+        {/* Vignette Depth Gradient */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/45 to-black/80" />
       </div>
 
-      {/* Top Bar with Direct Login Switch (Clean, full-screen setup style) */}
-      <div className="absolute top-6 right-6 z-20">
+      {/* Top Floating Action: Direct Login Button */}
+      <div className="absolute top-5 right-6 z-20">
         <button
           onClick={() => {
             sounds.playClick();
             setIsDirectLoginOpen(true);
           }}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium bg-white/10 hover:bg-white/15 border border-white/15 text-zinc-200 transition-all hover:scale-[1.02] shadow-sm backdrop-blur-xl"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium bg-white/10 hover:bg-white/20 border border-white/15 text-zinc-200 backdrop-blur-xl shadow-lg transition-all"
         >
           <LogIn className="w-3.5 h-3.5 text-purple-400" />
-          <span>Bereits ein Konto? Anmelden</span>
+          <span>Bestehenden Account anmelden</span>
         </button>
       </div>
 
-      {/* Main Setup Card Container (No window dots, no sidebar) */}
+      {/* Setup Card Container:
+          - NO heavy borders: 'border-0' or barely-visible ultra-fine hair glass reflection 'border border-white/10'
+          - VERY ROUND: 'rounded-[38px] sm:rounded-[44px]'
+          - NON-SCROLLABLE: 'overflow-hidden' with fixed compact height
+      */}
       <motion.div
-        initial={{ scale: 0.96, opacity: 0, y: 15 }}
+        initial={{ scale: 0.95, opacity: 0, y: 12 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 28 }}
-        className="relative w-full max-w-2xl h-[620px] max-h-[88vh] rounded-[28px] bg-[#161720]/80 border border-white/15 shadow-[0_25px_80px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden backdrop-blur-3xl text-zinc-100"
+        transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+        className="relative w-full max-w-[840px] h-[590px] rounded-[38px] sm:rounded-[44px] bg-[#141520]/75 border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden backdrop-blur-3xl text-zinc-100"
       >
-        {/* Main Stage Content */}
-        <div className="flex-1 flex flex-col justify-between p-6 sm:p-8 overflow-y-auto custom-scrollbar">
-            {/* Step 1: Welcome, Language & Region */}
-            {currentStep === 'welcome' && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6 max-w-xl mx-auto w-full my-auto"
+        {/* Top Header & Progress */}
+        <div className="px-7 pt-5 pb-2.5 flex flex-col gap-2 shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div
+                className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[11px] shadow-sm"
+                style={{ backgroundColor: accentConfig.primary }}
               >
-                <div className="text-center space-y-2">
-                  <div
-                    className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-2xl border border-white/20 mb-3"
-                    style={{
-                      backgroundColor: accentConfig.primary,
-                      boxShadow: `0 12px 30px ${accentConfig.glow}`,
-                    }}
-                  >
-                    <Globe className="w-8 h-8 text-white" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-white tracking-tight">
-                    Willkommen bei ObsidianOS
-                  </h2>
-                  <p className="text-sm text-zinc-400">
-                    Richte dein System in wenigen Schritten ein oder melde dich mit einem bestehenden Account an.
-                  </p>
-                </div>
+                <Sparkles className="w-3 h-3" />
+              </div>
+              <span className="text-xs font-bold text-zinc-300 tracking-wide uppercase">
+                ObsidianOS Assistent
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-mono">
+              <span>Schritt {currentStep} von 8</span>
+            </div>
+          </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {/* Language Selection */}
-                  <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 space-y-3">
-                    <label className="text-xs font-semibold text-zinc-300 block flex items-center gap-2">
-                      <Globe className="w-3.5 h-3.5 text-purple-400" />
-                      Bevorzugte Sprache
-                    </label>
-                    <div className="space-y-1.5">
-                      {[
-                        { code: 'de', label: 'Deutsch (Deutschland)' },
-                        { code: 'en', label: 'English (US)' },
-                        { code: 'fr', label: 'Français' },
-                      ].map((lang) => (
-                        <button
-                          key={lang.code}
-                          type="button"
-                          onClick={() => {
-                            sounds.playClick();
-                            setLanguage(lang.code as any);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between border transition-all ${
-                            language === lang.code
-                              ? 'bg-purple-600/30 border-purple-500 text-white font-semibold'
-                              : 'bg-black/20 border-white/5 text-zinc-400 hover:text-zinc-200'
-                          }`}
-                        >
-                          <span>{lang.label}</span>
-                          {language === lang.code && <Check className="w-3.5 h-3.5 text-purple-400" />}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Keyboard Layout */}
-                  <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 space-y-3">
-                    <label className="text-xs font-semibold text-zinc-300 block flex items-center gap-2">
-                      <Laptop className="w-3.5 h-3.5 text-purple-400" />
-                      Tastaturlayout
-                    </label>
-                    <div className="space-y-1.5">
-                      {[
-                        { code: 'de', label: 'Deutsch (QWERTZ)' },
-                        { code: 'us', label: 'US International (QWERTY)' },
-                        { code: 'ch', label: 'Schweiz (QWERTZ)' },
-                      ].map((kb) => (
-                        <button
-                          key={kb.code}
-                          type="button"
-                          onClick={() => {
-                            sounds.playClick();
-                            setKeyboardLayout(kb.code as any);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-xl text-xs flex items-center justify-between border transition-all ${
-                            keyboardLayout === kb.code
-                              ? 'bg-purple-600/30 border-purple-500 text-white font-semibold'
-                              : 'bg-black/20 border-white/5 text-zinc-400 hover:text-zinc-200'
-                          }`}
-                        >
-                          <span>{kb.label}</span>
-                          {keyboardLayout === kb.code && <Check className="w-3.5 h-3.5 text-purple-400" />}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Direct Login Banner */}
+          {/* 8-Segment Minimalist Progress Bar */}
+          <div className="grid grid-cols-8 gap-1.5 w-full">
+            {([1, 2, 3, 4, 5, 6, 7, 8] as SetupStep[]).map((stepNum) => {
+              const isPast = stepNum < currentStep;
+              const isCurrent = stepNum === currentStep;
+              return (
                 <div
-                  onClick={() => setIsDirectLoginOpen(true)}
-                  className="p-3.5 rounded-2xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-between cursor-pointer hover:bg-purple-500/20 transition-colors"
+                  key={stepNum}
+                  className="h-1 rounded-full overflow-hidden bg-white/10 transition-all duration-300"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl bg-purple-600/30 flex items-center justify-center text-purple-300">
-                      <HardDrive className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-purple-200">
-                        Bereits auf einem anderen Gerät eingerichtet?
-                      </p>
-                      <p className="text-[11px] text-purple-300/80">
-                        Melde dich direkt an, um deine Cloud-Dateien & Einstellungen zu laden.
-                      </p>
+                  <div
+                    className={`h-full transition-all duration-300 ${
+                      isPast
+                        ? 'bg-purple-500'
+                        : isCurrent
+                        ? 'bg-white'
+                        : 'bg-transparent'
+                    }`}
+                    style={isPast ? { backgroundColor: accentConfig.primary } : undefined}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Stage Content Area (Fixed layout, absolute NO scrollbar) */}
+        <div className="flex-1 px-8 py-2 flex flex-col justify-between overflow-hidden">
+          {/* Header Title & Subtitle */}
+          <div className="text-center space-y-1 mb-2 shrink-0">
+            <h2 className="text-xl font-bold text-white tracking-tight">
+              {stepTitles[currentStep].title}
+            </h2>
+            <p className="text-xs text-zinc-400">
+              {stepTitles[currentStep].subtitle}
+            </p>
+          </div>
+
+          {/* Step 1: Land, Region & Tastatur */}
+          {currentStep === 1 && (
+            <div className="flex-1 flex flex-col justify-center gap-3 overflow-hidden">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Country List */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+                    Heimatland wählen
+                  </label>
+                  <div className="space-y-1">
+                    {COUNTRIES.map((c) => {
+                      const isSelected = selectedCountry.id === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => handleSelectCountry(c)}
+                          className={`w-full px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-all ${
+                            isSelected
+                              ? 'bg-purple-600/30 border border-purple-500/60 text-white font-semibold shadow-sm'
+                              : 'bg-white/[0.03] border border-white/5 text-zinc-300 hover:bg-white/[0.07]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="text-base">{c.flag}</span>
+                            <span>{c.name}</span>
+                          </div>
+                          {isSelected && <Check className="w-3.5 h-3.5 text-purple-400" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Predefined regional settings & Languages */}
+                <div className="space-y-2.5 bg-white/[0.02] border border-white/10 rounded-2xl p-3.5 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+                      Automatische Regionaleinstellungen
+                    </span>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="p-2 rounded-lg bg-black/30 border border-white/5">
+                        <span className="text-[10px] text-zinc-400 block">Währung</span>
+                        <span className="font-semibold text-white">{selectedCountry.currency}</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-black/30 border border-white/5">
+                        <span className="text-[10px] text-zinc-400 block">Maßeinheiten</span>
+                        <span className="font-semibold text-white">
+                          {selectedCountry.units === 'metric' ? 'Metrisch (km, °C)' : 'Imperial (mi, °F)'}
+                        </span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-black/30 border border-white/5">
+                        <span className="text-[10px] text-zinc-400 block">Datumsformat</span>
+                        <span className="font-semibold text-white">{selectedCountry.dateFormat}</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-black/30 border border-white/5">
+                        <span className="text-[10px] text-zinc-400 block">Tastaturlayout</span>
+                        <span className="font-semibold text-purple-300">
+                          {keyboardLayout === 'de' ? 'QWERTZ (DE)' : keyboardLayout === 'ch' ? 'QWERTZ (CH)' : 'QWERTY (US)'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-purple-400" />
-                </div>
-              </motion.div>
-            )}
 
-            {/* Step 2: Account Creation */}
-            {currentStep === 'account' && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-5 max-w-xl mx-auto w-full"
-              >
-                <div className="text-center space-y-1">
-                  <h2 className="text-xl font-bold text-white">Computeraccount erstellen</h2>
-                  <p className="text-xs text-zinc-400">
-                    Dieser Account wird für die Anmeldung und Verschlüsselung auf diesem Gerät genutzt.
-                  </p>
-                </div>
-
-                {userFormError && (
-                  <div className="p-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-300 text-xs flex items-center gap-2">
-                    <Info className="w-4 h-4 shrink-0" />
-                    <span>{userFormError}</span>
+                  {/* Diktatfunktion Toggle */}
+                  <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Mic className="w-3.5 h-3.5 text-purple-400" />
+                      <div>
+                        <span className="text-xs font-semibold text-purple-200 block">Diktierfunktion</span>
+                        <span className="text-[10px] text-purple-300/70">Sprachbefehle für {selectedCountry.name}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDictationEnabled(!dictationEnabled)}
+                      className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
+                        dictationEnabled ? 'bg-purple-600' : 'bg-zinc-700'
+                      }`}
+                    >
+                      <div
+                        className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                          dictationEnabled ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
                   </div>
-                )}
+                </div>
+              </div>
+            </div>
+          )}
 
-                {/* Avatar Selection Grid */}
-                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
+          {/* Step 2: Barrierefreiheit (Eingabe- und Sehhilfen) */}
+          {currentStep === 2 && (
+            <div className="flex-1 flex flex-col justify-center gap-3 overflow-hidden">
+              <div className="grid grid-cols-3 gap-3">
+                {/* Sehschärfe */}
+                <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <Eye className="w-4 h-4 text-purple-400" />
+                      <span className="text-xs font-bold text-white">Sehschärfe</span>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="flex items-center justify-between text-xs text-zinc-300 cursor-pointer">
+                        <span>VoiceOver Screenreader</span>
+                        <input
+                          type="checkbox"
+                          checked={voiceOver}
+                          onChange={(e) => setVoiceOver(e.target.checked)}
+                          className="rounded border-zinc-700 text-purple-600 focus:ring-purple-500"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between text-xs text-zinc-300 cursor-pointer">
+                        <span>Bildschirmlupe / Zoom</span>
+                        <input
+                          type="checkbox"
+                          checked={screenZoom}
+                          onChange={(e) => setScreenZoom(e.target.checked)}
+                          className="rounded border-zinc-700 text-purple-600 focus:ring-purple-500"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between text-xs text-zinc-300 cursor-pointer">
+                        <span>Vergrößerter Text</span>
+                        <input
+                          type="checkbox"
+                          checked={largeText}
+                          onChange={(e) => setLargeText(e.target.checked)}
+                          className="rounded border-zinc-700 text-purple-600 focus:ring-purple-500"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-zinc-500 mt-2 block">Sofort anpassbar</span>
+                </div>
+
+                {/* Motorik */}
+                <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <Sliders className="w-4 h-4 text-blue-400" />
+                      <span className="text-xs font-bold text-white">Motorik</span>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="flex items-center justify-between text-xs text-zinc-300 cursor-pointer">
+                        <span>Schaltersteuerung</span>
+                        <input
+                          type="checkbox"
+                          checked={switchControl}
+                          onChange={(e) => setSwitchControl(e.target.checked)}
+                          className="rounded border-zinc-700 text-purple-600 focus:ring-purple-500"
+                        />
+                      </label>
+                      <div className="p-2 rounded-xl bg-black/30 border border-white/5 text-[11px] text-zinc-400 leading-snug">
+                        Ermöglicht Navigation mittels einzelner Tastendrücke oder Verweildauer.
+                      </div>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-zinc-500 mt-2 block">Optimierte Klick-Bereiche</span>
+                </div>
+
+                {/* Gehör */}
+                <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <Volume2 className="w-4 h-4 text-emerald-400" />
+                      <span className="text-xs font-bold text-white">Gehör</span>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="flex items-center justify-between text-xs text-zinc-300 cursor-pointer">
+                        <span>Live-Untertitel</span>
+                        <input
+                          type="checkbox"
+                          checked={liveCaptions}
+                          onChange={(e) => setLiveCaptions(e.target.checked)}
+                          className="rounded border-zinc-700 text-purple-600 focus:ring-purple-500"
+                        />
+                      </label>
+                      <label className="flex items-center justify-between text-xs text-zinc-300 cursor-pointer">
+                        <span>Blitzlicht bei Signalton</span>
+                        <input
+                          type="checkbox"
+                          checked={flashAlerts}
+                          onChange={(e) => setFlashAlerts(e.target.checked)}
+                          className="rounded border-zinc-700 text-purple-600 focus:ring-purple-500"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-zinc-500 mt-2 block">Visuelle Signale</span>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-between text-xs text-zinc-400">
+                <span>Möchtest du diese Optionen jetzt überspringen und Standardwerte beibehalten?</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sounds.playClick();
+                    setCurrentStep(3);
+                  }}
+                  className="px-3 py-1 rounded-lg bg-white/10 hover:bg-white/15 text-white font-medium text-xs transition-colors"
+                >
+                  Jetzt überspringen
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3: Netzwerkverbindung (Internet & Infrastruktur) */}
+          {currentStep === 3 && (
+            <div className="flex-1 flex flex-col justify-center gap-3 overflow-hidden">
+              <div className="grid grid-cols-2 gap-4">
+                {/* Available Networks */}
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-zinc-300">Profilbild auswählen</span>
-                    <div className="flex bg-black/40 p-0.5 rounded-lg border border-white/10 text-[11px]">
-                      <button
-                        type="button"
-                        onClick={() => setAvatarTab('presets')}
-                        className={`px-2.5 py-0.5 rounded-md ${
-                          avatarTab === 'presets' ? 'bg-purple-600 text-white font-medium' : 'text-zinc-400'
-                        }`}
-                      >
-                        Vorlagen
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setAvatarTab('custom')}
-                        className={`px-2.5 py-0.5 rounded-md ${
-                          avatarTab === 'custom' ? 'bg-purple-600 text-white font-medium' : 'text-zinc-400'
-                        }`}
-                      >
-                        Eigenes Foto
-                      </button>
+                    <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+                      WLAN-Netzwerke in Reichweite
+                    </span>
+                    <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-mono">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                      Aktiv
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {[
+                      { name: detectedWifiName, type: 'wifi', signal: 'Ausgezeichnet', secure: true },
+                      { name: 'Obsidian_Mesh_5G', type: 'wifi', signal: 'Sehr gut', secure: true },
+                      { name: 'Eduroam_Campus_Air', type: 'wifi', signal: 'Gut', secure: true },
+                      { name: 'Ethernet / Kabelgebunden (10 Gbps)', type: 'ethernet', signal: 'Kabel', secure: false },
+                    ].map((net) => {
+                      const isSelected = selectedNetwork === net.name;
+                      return (
+                        <button
+                          key={net.name}
+                          type="button"
+                          onClick={() => {
+                            sounds.playClick();
+                            setSelectedNetwork(net.name);
+                            if (net.type === 'ethernet') setConnectionType('ethernet');
+                            else setConnectionType('wifi');
+                          }}
+                          className={`w-full px-3 py-2.5 rounded-xl text-xs flex items-center justify-between transition-all ${
+                            isSelected
+                              ? 'bg-purple-600/30 border border-purple-500/60 text-white font-semibold'
+                              : 'bg-white/[0.03] border border-white/5 text-zinc-300 hover:bg-white/[0.07]'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5 truncate">
+                            {net.type === 'wifi' ? (
+                              <Wifi className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                            ) : (
+                              <HardDrive className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+                            )}
+                            <span className="truncate">{net.name}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {net.secure && <Lock className="w-3 h-3 text-zinc-500" />}
+                            {isSelected && <Check className="w-3.5 h-3.5 text-purple-400" />}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Network Credentials & Status */}
+                <div className="space-y-3 bg-white/[0.02] border border-white/10 rounded-2xl p-4 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+                      Authentifizierung für {selectedNetwork}
+                    </span>
+                    <div>
+                      <label className="text-[11px] text-zinc-400 block mb-1">
+                        WLAN-Passwort (WPA3 / Pre-Shared Key)
+                      </label>
+                      <input
+                        type="password"
+                        value={networkPassword}
+                        onChange={(e) => setNetworkPassword(e.target.value)}
+                        placeholder="Netzwerkschlüssel eingeben"
+                        className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 font-mono"
+                      />
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-300 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                        <span>Online via {selectedNetwork}</span>
+                      </div>
+                      <span className="text-[10px] font-mono text-emerald-400/80">Latenz: 14ms</span>
                     </div>
                   </div>
 
-                  {avatarTab === 'presets' ? (
-                    <div className="grid grid-cols-6 gap-2.5 pt-1">
-                      {AVATAR_PRESETS.map((preset) => (
+                  <button
+                    type="button"
+                    onClick={handleTestConnect}
+                    className="w-full py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs font-semibold text-zinc-200 transition-colors flex items-center justify-center gap-2"
+                  >
+                    {networkStatus === 'connecting' ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Verbindung wird geprüft...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Radio className="w-3.5 h-3.5 text-purple-400" />
+                        <span>Verbindung neu testen</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 4: Datenübertragung (Migrationsassistent) */}
+          {currentStep === 4 && (
+            <div className="flex-1 flex flex-col justify-center gap-3 overflow-hidden">
+              <div className="grid grid-cols-3 gap-3">
+                {/* Option 1: ObsidianOS Account */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    sounds.playClick();
+                    setMigrationMode('cloud_account');
+                  }}
+                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between transition-all ${
+                    migrationMode === 'cloud_account'
+                      ? 'bg-purple-600/25 border-purple-500/70 text-white shadow-md'
+                      : 'bg-white/[0.03] border-white/10 text-zinc-300 hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="w-9 h-9 rounded-xl bg-purple-600/30 flex items-center justify-center text-purple-300">
+                      <Share2 className="w-5 h-5" />
+                    </div>
+                    <h3 className="text-xs font-bold text-white">ObsidianOS Account</h3>
+                    <p className="text-[11px] text-zinc-400 leading-relaxed">
+                      Lade Einstellungen, Desktop-Symbole und Cloud-Dateien von einem bestehenden Profil.
+                    </p>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-[10px] font-mono text-purple-300">
+                    <span>Cloud-Sync bereit</span>
+                    {migrationMode === 'cloud_account' && <Check className="w-3.5 h-3.5 text-purple-400" />}
+                  </div>
+                </button>
+
+                {/* Option 2: Time Machine / Backup */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    sounds.playClick();
+                    setMigrationMode('time_machine');
+                  }}
+                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between transition-all ${
+                    migrationMode === 'time_machine'
+                      ? 'bg-purple-600/25 border-purple-500/70 text-white shadow-md'
+                      : 'bg-white/[0.03] border-white/10 text-zinc-300 hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="w-9 h-9 rounded-xl bg-blue-600/30 flex items-center justify-center text-blue-300">
+                      <HardDrive className="w-5 h-5" />
+                    </div>
+                    <h3 className="text-xs font-bold text-white">Time-Machine-Backup</h3>
+                    <p className="text-[11px] text-zinc-400 leading-relaxed">
+                      Stelle Systemabbild von einem virtuellen Snapshot oder externem Datenträger wieder her.
+                    </p>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-[10px] font-mono text-blue-300">
+                    <span>Snapshot-Import</span>
+                    {migrationMode === 'time_machine' && <Check className="w-3.5 h-3.5 text-blue-400" />}
+                  </div>
+                </button>
+
+                {/* Option 3: Not now / Fresh */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    sounds.playClick();
+                    setMigrationMode('none');
+                  }}
+                  className={`p-4 rounded-2xl border text-left flex flex-col justify-between transition-all ${
+                    migrationMode === 'none'
+                      ? 'bg-purple-600/25 border-purple-500/70 text-white shadow-md'
+                      : 'bg-white/[0.03] border-white/10 text-zinc-300 hover:bg-white/[0.06]'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="w-9 h-9 rounded-xl bg-emerald-600/30 flex items-center justify-center text-emerald-300">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <h3 className="text-xs font-bold text-white">Jetzt nicht übertragen</h3>
+                    <p className="text-[11px] text-zinc-400 leading-relaxed">
+                      Konfiguriere diesen Computer als vollkommen frisches, sauberes ObsidianOS System.
+                    </p>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-[10px] font-mono text-emerald-300">
+                    <span>Empfohlen (Neu)</span>
+                    {migrationMode === 'none' && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                  </div>
+                </button>
+              </div>
+
+              {migrationMode === 'cloud_account' && (
+                <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-xs text-purple-200 flex items-center justify-between">
+                  <span>Es wurden {cloudUsers.length} synchronisierte Profile im Netzwerk gefunden.</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsDirectLoginOpen(true)}
+                    className="px-3 py-1 rounded-lg bg-purple-600 text-white font-semibold text-xs shadow-sm hover:bg-purple-500"
+                  >
+                    Profil auswählen
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 5: Konto & Authentifizierung */}
+          {currentStep === 5 && (
+            <div className="flex-1 flex flex-col justify-center gap-2.5 overflow-hidden">
+              {formError && (
+                <div className="p-2 rounded-xl bg-red-500/20 border border-red-500/40 text-red-300 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4">
+                {/* Left: Name, Username & Avatar */}
+                <div className="space-y-2.5">
+                  <div>
+                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">
+                      Vollständiger Name
+                    </label>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => handleFullNameChange(e.target.value)}
+                      placeholder="z. B. Lia Clu"
+                      className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1">
+                      Account-Name (Kurzname für den /Users/ Ordner)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={accountName}
+                        onChange={(e) => setAccountName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                        placeholder="z. B. liaclu"
+                        className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 font-mono"
+                      />
+                    </div>
+                    <span className="text-[10px] text-zinc-400 font-mono block mt-1">
+                      Pfad: ~/Users/{accountName || 'username'}
+                    </span>
+                  </div>
+
+                  {/* Avatar Picker Quick Preview */}
+                  <div>
+                    <label className="text-[11px] font-semibold text-zinc-300 block mb-1.5">
+                      Profilbild auswählen
+                    </label>
+                    <div className="flex gap-2">
+                      {AVATAR_PRESETS.slice(0, 5).map((preset) => (
                         <button
                           key={preset.id}
                           type="button"
@@ -438,541 +935,396 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                             sounds.playClick();
                             setSelectedAvatar(preset.url);
                           }}
-                          className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all group ${
+                          className={`w-9 h-9 rounded-full overflow-hidden border-2 transition-all ${
                             selectedAvatar === preset.url
-                              ? 'border-purple-500 scale-105 shadow-md ring-2 ring-purple-500/30'
-                              : 'border-transparent opacity-75 hover:opacity-100 hover:border-white/40'
+                              ? 'border-purple-500 ring-2 ring-purple-500/40 scale-105'
+                              : 'border-white/10 opacity-70 hover:opacity-100'
                           }`}
                         >
-                          <img
-                            src={preset.url}
-                            alt={preset.name}
-                            className="w-full h-full object-cover"
-                          />
-                          {selectedAvatar === preset.url && (
-                            <div className="absolute inset-0 bg-purple-600/30 flex items-center justify-center">
-                              <Check className="w-3.5 h-3.5 text-white drop-shadow" />
-                            </div>
-                          )}
+                          <img src={preset.url} alt={preset.name} className="w-full h-full object-cover" />
                         </button>
                       ))}
                     </div>
-                  ) : (
-                    <div className="space-y-2 pt-1">
-                      <div className="flex gap-2">
-                        <input
-                          type="url"
-                          placeholder="Bild-URL eingeben (https://...)"
-                          value={customAvatarUrl}
-                          onChange={(e) => setCustomAvatarUrl(e.target.value)}
-                          className="flex-1 px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500"
-                        />
-                        {customAvatarUrl && (
-                          <div className="w-9 h-9 rounded-xl overflow-hidden border border-white/20 shrink-0">
-                            <img
-                              src={customAvatarUrl}
-                              alt="Avatar Vorschau"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
+                  </div>
+                </div>
+
+                {/* Right: Password, Hint & Terms */}
+                <div className="space-y-2.5 bg-white/[0.02] border border-white/10 rounded-2xl p-3.5 flex flex-col justify-between">
+                  <div className="space-y-2">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-semibold text-zinc-300">Passwort</label>
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="text-[10px] text-purple-400 hover:text-purple-300"
+                        >
+                          {showPassword ? 'Verbergen' : 'Anzeigen'}
+                        </button>
                       </div>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Mindestens 4 Zeichen"
+                        className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 font-mono"
+                      />
                     </div>
+
+                    <div>
+                      <label className="text-[11px] font-semibold text-zinc-300 block mb-1">
+                        Passwort wiederholen
+                      </label>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Passwort bestätigen"
+                        className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 font-mono"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] font-semibold text-zinc-300 block mb-1">
+                        Passwort-Hinweis (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={passwordHint}
+                        onChange={(e) => setPasswordHint(e.target.value)}
+                        placeholder="z. B. Name meines Haustiers"
+                        className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Terms Checkbox */}
+                  <label className="p-2 rounded-xl bg-black/30 border border-white/5 flex items-start gap-2.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={termsAccepted}
+                      onChange={(e) => setTermsAccepted(e.target.checked)}
+                      className="mt-0.5 rounded border-zinc-700 text-purple-600 focus:ring-purple-500"
+                    />
+                    <span className="text-[10px] text-zinc-400 leading-snug">
+                      Ich akzeptiere die{' '}
+                      <span className="text-purple-300 font-medium">ObsidianOS Lizenzvereinbarung</span> und die
+                      Datenschutz- und Cloud-Bedingungen.
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 6: Sicherheit & Verschlüsselung (Optic ID) */}
+          {currentStep === 6 && (
+            <div className="flex-1 flex flex-col items-center justify-center gap-4 overflow-hidden">
+              {/* Biometric Eye HUD Ring */}
+              <div className="relative w-32 h-32 flex items-center justify-center">
+                {/* Outer Glow Ring */}
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 8, ease: 'linear' }}
+                  className="absolute inset-0 rounded-full border-2 border-dashed border-purple-500/40"
+                />
+                {/* Pulse Ring */}
+                <div
+                  className={`absolute inset-2 rounded-full border border-purple-500/60 transition-all ${
+                    opticIdStatus === 'scanning' ? 'animate-ping opacity-30' : 'opacity-20'
+                  }`}
+                />
+                {/* Core Eye / Sensor Container */}
+                <div
+                  className="w-24 h-24 rounded-full bg-purple-950/40 border border-purple-400/50 flex flex-col items-center justify-center relative overflow-hidden shadow-[0_0_30px_rgba(168,85,247,0.35)]"
+                >
+                  {opticIdStatus === 'completed' ? (
+                    <CheckCircle2 className="w-10 h-10 text-emerald-400 drop-shadow" />
+                  ) : (
+                    <Eye className="w-10 h-10 text-purple-300" />
+                  )}
+
+                  {/* Scanning Laser Line */}
+                  {opticIdStatus === 'scanning' && (
+                    <motion.div
+                      animate={{ y: [-30, 30, -30] }}
+                      transition={{ repeat: Infinity, duration: 1.4, ease: 'easeInOut' }}
+                      className="absolute inset-x-0 h-0.5 bg-cyan-400 shadow-[0_0_8px_#22d3ee]"
+                    />
                   )}
                 </div>
-
-                {/* Form Fields */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div>
-                    <label className="text-[11px] font-medium text-zinc-300 block mb-1">
-                      Vollständiger Name / Anzeigename *
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="z. B. Lia C. oder Administrator"
-                      value={displayName}
-                      onChange={(e) => {
-                        setDisplayName(e.target.value);
-                        if (!username) {
-                          setUsername(
-                            e.target.value
-                              .toLowerCase()
-                              .replace(/\s+/g, '')
-                              .replace(/[^a-z0-9]/g, '')
-                          );
-                        }
-                      }}
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-medium text-zinc-300 block mb-1">
-                      Accountname (@username) *
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="z. B. lia oder admin"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[11px] font-medium text-zinc-300">
-                        Sicherheits-PIN / Passwort
-                      </label>
-                      <button
-                        type="button"
-                        onClick={() => setShowPin(!showPin)}
-                        className="text-[10px] text-purple-400 hover:underline"
-                      >
-                        {showPin ? 'Verbergen' : 'Anzeigen'}
-                      </button>
-                    </div>
-                    <input
-                      type={showPin ? 'text' : 'password'}
-                      placeholder="z. B. 1234 oder leer für Schnellzugriff"
-                      value={pin}
-                      onChange={(e) => setPin(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-medium text-zinc-300 block mb-1">
-                      PIN bestätigen
-                    </label>
-                    <input
-                      type={showPin ? 'text' : 'password'}
-                      placeholder="PIN wiederholen"
-                      value={confirmPin}
-                      onChange={(e) => setConfirmPin(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 font-mono"
-                    />
-                  </div>
-                </div>
-
-                {/* Account Type & Role */}
-                <div className="p-3 rounded-xl bg-white/[0.02] border border-white/10 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <Shield className="w-4 h-4 text-purple-400" />
-                    <div>
-                      <p className="text-xs font-semibold text-white">Kontotyp</p>
-                      <p className="text-[11px] text-zinc-400">
-                        Als Administrator hast du vollen Zugriff auf Systemeinstellungen & Backups.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex bg-black/40 p-0.5 rounded-lg border border-white/10 text-xs">
-                    <button
-                      type="button"
-                      onClick={() => setRole('Administrator')}
-                      className={`px-3 py-1 rounded-md transition-all ${
-                        role === 'Administrator' ? 'bg-purple-600 text-white font-semibold' : 'text-zinc-400'
-                      }`}
-                    >
-                      Admin
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRole('Benutzer')}
-                      className={`px-3 py-1 rounded-md transition-all ${
-                        role === 'Benutzer' ? 'bg-purple-600 text-white font-semibold' : 'text-zinc-400'
-                      }`}
-                    >
-                      Standard
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 3: Appearance & Personalization */}
-            {currentStep === 'appearance' && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6 max-w-xl mx-auto w-full my-auto"
-              >
-                <div className="text-center space-y-1">
-                  <h2 className="text-xl font-bold text-white">Erscheinungsbild anpassen</h2>
-                  <p className="text-xs text-zinc-400">
-                    Wähle dein bevorzugtes Designthema und deine Akzentfarbe für Fenster und Menüs.
-                  </p>
-                </div>
-
-                {/* Theme Mode Selection Cards */}
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      sounds.playClick();
-                      setThemeMode('shader');
-                    }}
-                    className={`p-4 rounded-2xl border text-left flex flex-col justify-between transition-all ${
-                      themeMode === 'shader'
-                        ? 'bg-purple-900/20 border-purple-500 shadow-lg ring-2 ring-purple-500/20'
-                        : 'bg-white/[0.03] border-white/10 hover:border-white/20'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="w-9 h-9 rounded-xl bg-purple-600/30 flex items-center justify-center text-purple-300">
-                        <Sparkles className="w-5 h-5" />
-                      </div>
-                      {themeMode === 'shader' && <Check className="w-4 h-4 text-purple-400" />}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-white">Cyber Shader Theme</h4>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">
-                        Prozedurale flüssige Farbwellen & dynamische Glas-Unschärfe.
-                      </p>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      sounds.playClick();
-                      setThemeMode('photo');
-                    }}
-                    className={`p-4 rounded-2xl border text-left flex flex-col justify-between transition-all ${
-                      themeMode === 'photo'
-                        ? 'bg-purple-900/20 border-purple-500 shadow-lg ring-2 ring-purple-500/20'
-                        : 'bg-white/[0.03] border-white/10 hover:border-white/20'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="w-9 h-9 rounded-xl bg-blue-600/30 flex items-center justify-center text-blue-300">
-                        <Palette className="w-5 h-5" />
-                      </div>
-                      {themeMode === 'photo' && <Check className="w-4 h-4 text-purple-400" />}
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-white">Natur & Wallpaper</h4>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">
-                        Kuratierte hochauflösende Fotolandschaften & minimalistische Motive.
-                      </p>
-                    </div>
-                  </button>
-                </div>
-
-                {/* Accent Color Palette */}
-                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
-                  <span className="text-xs font-semibold text-zinc-300 block">Akzentfarbe auswählen</span>
-                  <div className="grid grid-cols-4 sm:grid-cols-8 gap-2.5">
-                    {Object.entries(ACCENT_COLORS).map(([id, conf]) => (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => {
-                          sounds.playClick();
-                          setSelectedAccent(id as AccentColorId);
-                        }}
-                        className={`group flex flex-col items-center gap-1.5 p-2 rounded-xl border transition-all ${
-                          selectedAccent === id
-                            ? 'bg-white/15 border-white/40 scale-105 shadow-md'
-                            : 'bg-black/20 border-white/5 hover:border-white/20'
-                        }`}
-                        title={conf.name}
-                      >
-                        <div
-                          className="w-6 h-6 rounded-full shadow-inner flex items-center justify-center transition-transform group-hover:scale-110"
-                          style={{ backgroundColor: conf.primary }}
-                        >
-                          {selectedAccent === id && <Check className="w-3.5 h-3.5 text-white drop-shadow" />}
-                        </div>
-                        <span className="text-[10px] text-zinc-300 truncate w-full text-center">
-                          {conf.name.split(' ')[0]}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Wallpaper Preview Selection */}
-                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
-                  <span className="text-xs font-semibold text-zinc-300 block">Hintergrundbild</span>
-                  <div className="grid grid-cols-4 gap-2.5">
-                    {WALLPAPERS.slice(0, 4).map((wp) => (
-                      <button
-                        key={wp.id}
-                        type="button"
-                        onClick={() => {
-                          sounds.playClick();
-                          setSelectedWallpaper(wp.id as WallpaperId);
-                        }}
-                        className={`relative rounded-xl overflow-hidden aspect-video border-2 transition-all ${
-                          selectedWallpaper === wp.id
-                            ? 'border-purple-500 scale-105 shadow-md ring-2 ring-purple-500/30'
-                            : 'border-transparent opacity-75 hover:opacity-100 hover:border-white/30'
-                        }`}
-                      >
-                        <div
-                          className="w-full h-full"
-                          style={{ background: wp.previewGradient }}
-                        />
-                        <span className="absolute bottom-1 left-1.5 right-1.5 text-[9px] font-medium text-white truncate drop-shadow bg-black/50 px-1 py-0.5 rounded">
-                          {wp.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 4: System & Desktop Preferences */}
-            {currentStep === 'system' && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-5 max-w-xl mx-auto w-full my-auto"
-              >
-                <div className="text-center space-y-1">
-                  <h2 className="text-xl font-bold text-white">System & Desktop konfigurieren</h2>
-                  <p className="text-xs text-zinc-400">
-                    Passe das Verhalten von Uhr, Dock und Audioeffekten an deine Vorlieben an.
-                  </p>
-                </div>
-
-                {/* Clock Font Styles */}
-                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-3">
-                  <span className="text-xs font-semibold text-zinc-300 block flex items-center gap-2">
-                    <Clock className="w-3.5 h-3.5 text-purple-400" />
-                    Uhrzeit-Typografie
-                  </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    {[
-                      { id: 'sans-ultralight', label: 'Ultraleicht', font: 'font-extralight' },
-                      { id: 'cyber-mono', label: 'Cyber Mono', font: 'font-mono' },
-                      { id: 'luxury-serif', label: 'Serif Elegant', font: 'font-serif' },
-                      { id: 'matrix-digital', label: 'Matrix LED', font: 'font-mono' },
-                    ].map((f) => (
-                      <button
-                        key={f.id}
-                        type="button"
-                        onClick={() => {
-                          sounds.playClick();
-                          setClockFont(f.id as ClockFont);
-                        }}
-                        className={`p-3 rounded-xl border text-center transition-all ${
-                          clockFont === f.id
-                            ? 'bg-purple-600/30 border-purple-500 text-white font-semibold'
-                            : 'bg-black/20 border-white/5 text-zinc-400 hover:text-white'
-                        }`}
-                      >
-                        <div className={`text-base ${f.font} mb-0.5`}>12:45</div>
-                        <span className="text-[10px] text-zinc-400">{f.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* System Toggles */}
-                <div className="space-y-2.5">
-                  <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold text-white">24-Stunden-Uhrzeitformat</p>
-                      <p className="text-[11px] text-zinc-400">Nutze das 24h-Format statt 12h AM/PM.</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        sounds.playToggle();
-                        setClockFormat24h(!clockFormat24h);
-                      }}
-                      className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
-                        clockFormat24h ? 'bg-purple-600' : 'bg-white/20'
-                      }`}
-                    >
-                      <div
-                        className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                          clockFormat24h ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold text-white">Dock-Vergrößerungseffekt</p>
-                      <p className="text-[11px] text-zinc-400">Icons im Dock vergrößern sich beim Drüberfahren.</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        sounds.playToggle();
-                        setDockMagnification(!dockMagnification);
-                      }}
-                      className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
-                        dockMagnification ? 'bg-purple-600' : 'bg-white/20'
-                      }`}
-                    >
-                      <div
-                        className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                          dockMagnification ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
-
-                  <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10 flex items-center justify-between">
-                    <div className="flex items-center gap-2.5">
-                      <Volume2 className="w-4 h-4 text-purple-400" />
-                      <div>
-                        <p className="text-xs font-semibold text-white">System-Sounds & Haptik</p>
-                        <p className="text-[11px] text-zinc-400">
-                          Akustisches Feedback bei Aktionen, Klicks und Fenstern.
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        sounds.playToggle();
-                        setSoundEffects(!soundEffects);
-                      }}
-                      className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
-                        soundEffects ? 'bg-purple-600' : 'bg-white/20'
-                      }`}
-                    >
-                      <div
-                        className={`w-5 h-5 rounded-full bg-white transition-transform ${
-                          soundEffects ? 'translate-x-5' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 5: Finish & Launch */}
-            {currentStep === 'finish' && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                className="space-y-6 max-w-xl mx-auto w-full my-auto text-center"
-              >
-                <div
-                  className="w-20 h-20 rounded-3xl mx-auto flex items-center justify-center shadow-2xl border border-white/20 relative"
-                  style={{
-                    backgroundColor: ACCENT_COLORS[selectedAccent]?.primary || '#9333ea',
-                    boxShadow: `0 16px 40px ${ACCENT_COLORS[selectedAccent]?.glow || 'rgba(147,51,234,0.5)'}`,
-                  }}
-                >
-                  <Sparkles className="w-10 h-10 text-white animate-pulse" />
-                </div>
-
-                <div className="space-y-1.5">
-                  <h2 className="text-2xl font-bold text-white tracking-tight">Alles bereit!</h2>
-                  <p className="text-sm text-zinc-300">
-                    Dein ObsidianOS-Benutzerkonto ist konfiguriert und wird verschlüsselt gespeichert.
-                  </p>
-                </div>
-
-                {/* Profile Summary Card */}
-                <div className="p-4 rounded-2xl bg-white/[0.04] border border-white/10 max-w-md mx-auto flex items-center gap-4 text-left shadow-lg">
-                  <div className="w-14 h-14 rounded-2xl overflow-hidden border border-white/20 shrink-0 shadow">
-                    <img
-                      src={
-                        avatarTab === 'custom' && customAvatarUrl.trim()
-                          ? customAvatarUrl
-                          : selectedAvatar
-                      }
-                      alt="Avatar"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-white truncate">{displayName || 'Administrator'}</h4>
-                    <p className="text-xs text-purple-400 font-mono">@{username || 'admin'}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                        {role}
-                      </span>
-                      <span className="text-[10px] text-zinc-400">
-                        {pin ? 'PIN-Schutz aktiv' : 'Passwortfrei'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <p className="text-[11px] text-zinc-400 max-w-sm mx-auto">
-                  Deine Daten werden in Browser-Cookies, lokalem Speicher und Firebase Firestore synchronisiert.
-                </p>
-              </motion.div>
-            )}
-
-            {/* Bottom Actions Bar with Compact Setup Steps */}
-            <div className="pt-6 border-t border-white/10 flex items-center justify-between mt-4">
-              {currentStep !== 'welcome' ? (
-                <button
-                  type="button"
-                  onClick={handleBack}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-zinc-300 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  <ArrowLeft className="w-3.5 h-3.5" />
-                  <span>Zurück</span>
-                </button>
-              ) : (
-                <div className="w-16" />
-              )}
-
-              {/* Compact Step Indicator Dots / Pills */}
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/40 border border-white/10 shadow-inner">
-                {stepsList.map((step, idx) => {
-                  const isCurrent = currentStep === step.id;
-                  const stepIndex = stepsList.findIndex((s) => s.id === currentStep);
-                  const isDone = idx < stepIndex;
-
-                  return (
-                    <div
-                      key={step.id}
-                      title={step.title}
-                      className="flex items-center gap-1"
-                    >
-                      <div
-                        className={`transition-all duration-300 rounded-full flex items-center justify-center ${
-                          isCurrent
-                            ? 'w-6 h-6 bg-purple-600 text-white text-[10px] font-bold shadow-md shadow-purple-500/40 ring-2 ring-purple-400/40'
-                            : isDone
-                            ? 'w-4 h-4 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px]'
-                            : 'w-2 h-2 bg-white/20'
-                        }`}
-                      >
-                        {isCurrent ? idx + 1 : isDone ? <Check className="w-2.5 h-2.5" /> : null}
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
 
-              {currentStep !== 'finish' ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-semibold text-white shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
-                  style={{
-                    backgroundColor: accentConfig.primary,
-                    boxShadow: `0 8px 20px ${accentConfig.glow}`,
-                  }}
-                >
-                  <span>Fortfahren</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </button>
-              ) : (
+              {/* Status Message & Action */}
+              <div className="text-center space-y-1.5 max-w-md">
+                {opticIdStatus === 'completed' ? (
+                  <>
+                    <h3 className="text-sm font-bold text-emerald-400">Optic ID erfolgreich registriert!</h3>
+                    <p className="text-xs text-zinc-400">
+                      Dein biometrisches Augenmuster wurde sicher in der verschlüsselten Enklave gespeichert.
+                    </p>
+                  </>
+                ) : opticIdStatus === 'scanning' ? (
+                  <>
+                    <h3 className="text-sm font-bold text-white">Scanne Netzhaut & Iris... ({scanProgress}%)</h3>
+                    <p className="text-xs text-purple-300">
+                      Halte den Blick auf den Sensor gerichtet.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-sm font-bold text-white">Optic ID für Login & Sicherheit</h3>
+                    <p className="text-xs text-zinc-400">
+                      Erfasse deinen Augenscan, um dich nahtlos bei ObsidianOS anzumelden und Passwörter zu bestätigen.
+                    </p>
+                  </>
+                )}
+              </div>
+
+              {/* Buttons */}
+              <div className="flex gap-3 pt-1">
+                {opticIdStatus !== 'completed' ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={opticIdStatus === 'scanning'}
+                      onClick={handleStartOpticScan}
+                      className="px-5 py-2 rounded-xl text-xs font-semibold text-white shadow-lg transition-all hover:scale-[1.02] flex items-center gap-2 disabled:opacity-50"
+                      style={{ backgroundColor: accentConfig.primary }}
+                    >
+                      <Scan className="w-3.5 h-3.5" />
+                      <span>{opticIdStatus === 'scanning' ? 'Erfasse Scan...' : 'Optic ID jetzt erfassen'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sounds.playClick();
+                        setOpticIdStatus('skipped');
+                        setCurrentStep(7);
+                      }}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-zinc-300 transition-colors"
+                    >
+                      Später einrichten
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sounds.playClick();
+                      setCurrentStep(7);
+                    }}
+                    className="px-6 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md transition-all flex items-center gap-2"
+                  >
+                    <span>Weiter zur Hintergrundkonfiguration</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Step 7: Ortung, Diagnose & Dienste */}
+          {currentStep === 7 && (
+            <div className="flex-1 flex flex-col justify-center gap-2.5 overflow-hidden">
+              <div className="grid grid-cols-2 gap-3">
+                {/* Ortungsdienste */}
+                <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-bold text-white">
+                      <MapPin className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Ortungsdienste</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 leading-snug">
+                      Erlaube Standortzugriff für Wetterberichte, genaue Zeitzone und lokale Karten.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setLocationServices(!locationServices)}
+                    className={`w-9 h-5 rounded-full p-0.5 transition-colors shrink-0 ${
+                      locationServices ? 'bg-purple-600' : 'bg-zinc-700'
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                        locationServices ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Kamera & Mikrofon Schutz */}
+                <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-bold text-white">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Kamera & Mikrofon</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 leading-snug">
+                      Explizite Freigabe erforderlich, bevor Web-Apps oder Spiele Sensoren nutzen dürfen.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCameraMicProtection(!cameraMicProtection)}
+                    className={`w-9 h-5 rounded-full p-0.5 transition-colors shrink-0 ${
+                      cameraMicProtection ? 'bg-purple-600' : 'bg-zinc-700'
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                        cameraMicProtection ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Bildschirmzeit (Screen Time) */}
+                <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-bold text-white">
+                      <Clock className="w-3.5 h-3.5 text-purple-400" />
+                      <span>Bildschirmzeit (Screen Time)</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 leading-snug">
+                      Nutzungsverfolgung und Auswertungen synchronisieren für digitale Balance.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setScreenTimeSync(!screenTimeSync)}
+                    className={`w-9 h-5 rounded-full p-0.5 transition-colors shrink-0 ${
+                      screenTimeSync ? 'bg-purple-600' : 'bg-zinc-700'
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                        screenTimeSync ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Diagnoseberichte */}
+                <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/10 flex items-start justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-xs font-bold text-white">
+                      <FileText className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Diagnose & Telemetrie</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 leading-snug">
+                      Anonyme Leistungsdaten teilen, um Systemabstürze automatisch zu beheben.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDiagnosticReports(!diagnosticReports)}
+                    className={`w-9 h-5 rounded-full p-0.5 transition-colors shrink-0 ${
+                      diagnosticReports ? 'bg-purple-600' : 'bg-zinc-700'
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                        diagnosticReports ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Step 8: Personalisierung & Finale */}
+          {currentStep === 8 && (
+            <div className="flex-1 flex flex-col justify-center gap-3 overflow-hidden">
+              {/* Theme Mode Selector (Hell, Dunkel, glassy oder Automatisch) */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+                  Erscheinungsbild wählen
+                </label>
+                <div className="grid grid-cols-4 gap-2.5">
+                  {[
+                    { id: 'light', name: 'Hell', desc: 'Klares Lichtdesign' },
+                    { id: 'dark', name: 'Dunkel', desc: 'Obsidian Noir' },
+                    { id: 'glassy', name: 'Glassy', desc: 'VisionOS Frosted' },
+                    { id: 'auto', name: 'Automatisch', desc: 'Tageszeitbasiert' },
+                  ].map((t) => {
+                    const isSelected = themeMode === t.id;
+                    return (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => {
+                          sounds.playClick();
+                          setThemeMode(t.id as any);
+                        }}
+                        className={`p-2.5 rounded-2xl border text-left transition-all ${
+                          isSelected
+                            ? 'bg-purple-600/30 border-purple-500 text-white shadow-md font-semibold'
+                            : 'bg-white/[0.03] border-white/10 text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs text-white font-bold">{t.name}</span>
+                          {isSelected && <Check className="w-3 h-3 text-purple-400" />}
+                        </div>
+                        <span className="text-[10px] text-zinc-400 block leading-tight">{t.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Accent Color Palette */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+                  System-Akzentfarbe
+                </label>
+                <div className="flex items-center gap-2.5">
+                  {[
+                    { id: 'violet-classic', name: 'Obsidian Violett', color: '#a855f7' },
+                    { id: 'electric-blue', name: 'Azurblau', color: '#3b82f6' },
+                    { id: 'emerald-matrix', name: 'Matrix Smaragd', color: '#10b981' },
+                    { id: 'rose-quartz', name: 'Roségold', color: '#f43f5e' },
+                    { id: 'sunset-amber', name: 'Bernstein', color: '#f59e0b' },
+                  ].map((acc) => {
+                    const isSelected = selectedAccent === acc.id;
+                    return (
+                      <button
+                        key={acc.id}
+                        type="button"
+                        onClick={() => {
+                          sounds.playClick();
+                          setSelectedAccent(acc.id as AccentColorId);
+                        }}
+                        className={`px-3 py-1.5 rounded-xl border text-xs flex items-center gap-2 transition-all ${
+                          isSelected
+                            ? 'bg-white/15 border-white/40 text-white font-semibold'
+                            : 'bg-black/30 border-white/10 text-zinc-400 hover:text-white'
+                        }`}
+                      >
+                        <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: acc.color }} />
+                        <span>{acc.name}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Final Ready Box */}
+              <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/10 flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-white">Alles bereit für den Start!</h4>
+                  <p className="text-[11px] text-zinc-400">
+                    Dein personalisiertes ObsidianOS Betriebssystem wird nun initialisiert.
+                  </p>
+                </div>
                 <button
                   type="button"
                   disabled={isFinalizing}
                   onClick={handleLaunchOS}
-                  className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-xl transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                  className="px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-xl transition-all hover:scale-[1.03] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
                   style={{
                     backgroundColor: ACCENT_COLORS[selectedAccent]?.primary || '#9333ea',
                     boxShadow: `0 8px 25px ${ACCENT_COLORS[selectedAccent]?.glow || 'rgba(147,51,234,0.6)'}`,
@@ -981,7 +1333,7 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                   {isFinalizing ? (
                     <>
                       <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Richte System ein...</span>
+                      <span>Richte Desktop ein...</span>
                     </>
                   ) : (
                     <>
@@ -990,12 +1342,56 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                     </>
                   )}
                 </button>
-              )}
+              </div>
             </div>
+          )}
+        </div>
+
+        {/* Bottom Navigation Controls Bar */}
+        <div className="px-8 py-4 border-t border-white/10 bg-black/20 flex items-center justify-between shrink-0">
+          <button
+            type="button"
+            disabled={currentStep === 1}
+            onClick={handleBack}
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition-all"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Zurück</span>
+          </button>
+
+          {/* Dots Indicator */}
+          <div className="flex items-center gap-1.5">
+            {([1, 2, 3, 4, 5, 6, 7, 8] as SetupStep[]).map((stepNum) => (
+              <div
+                key={stepNum}
+                className={`h-1.5 rounded-full transition-all duration-300 ${
+                  currentStep === stepNum ? 'w-5 bg-purple-400' : 'w-1.5 bg-white/20'
+                }`}
+                style={currentStep === stepNum ? { backgroundColor: accentConfig.primary } : undefined}
+              />
+            ))}
+          </div>
+
+          {currentStep < 8 ? (
+            <button
+              type="button"
+              onClick={handleNext}
+              className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-semibold text-white shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+              style={{
+                backgroundColor: accentConfig.primary,
+                boxShadow: `0 8px 20px ${accentConfig.glow}`,
+              }}
+            >
+              <span>Fortfahren</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <div className="w-24" />
+          )}
         </div>
       </motion.div>
 
-      {/* Direct Login Modal Overlay for Existing Users */}
+      {/* Direct Login Modal Overlay for Existing Cloud Accounts */}
       <AnimatePresence>
         {isDirectLoginOpen && (
           <motion.div
@@ -1008,7 +1404,7 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
               initial={{ scale: 0.95, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
-              className="w-full max-w-md p-6 rounded-3xl bg-[#1a1b23] border border-white/20 shadow-2xl text-zinc-100 space-y-5"
+              className="w-full max-w-md p-6 rounded-3xl bg-[#181924] border border-white/20 shadow-2xl text-zinc-100 space-y-5"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
@@ -1017,7 +1413,7 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-white">Bestehendes Konto anmelden</h3>
-                    <p className="text-[11px] text-zinc-400">Überspringe das Setup und lade deine Cloud-Daten.</p>
+                    <p className="text-[11px] text-zinc-400">Lade deine Cloud-Daten und Einstellungen.</p>
                   </div>
                 </div>
                 <button
@@ -1031,13 +1427,12 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
 
               {directLoginError && (
                 <div className="p-3 rounded-xl bg-red-500/20 border border-red-500/40 text-red-300 text-xs flex items-center gap-2">
-                  <Info className="w-4 h-4 shrink-0" />
+                  <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{directLoginError}</span>
                 </div>
               )}
 
               <form onSubmit={handleExecuteDirectLogin} className="space-y-4">
-                {/* Synced Profile List */}
                 <div className="space-y-2">
                   <label className="text-[11px] font-semibold text-zinc-300 block">
                     Konto auswählen
@@ -1052,7 +1447,6 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                           onClick={() => {
                             sounds.playClick();
                             setDirectLoginUserId(u.id);
-                            setDirectLoginUsername(u.username);
                           }}
                           className={`w-full p-2.5 rounded-xl border flex items-center gap-3 transition-all text-left ${
                             isSelected
@@ -1076,7 +1470,6 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                   </div>
                 </div>
 
-                {/* PIN Input */}
                 <div>
                   <label className="text-[11px] font-medium text-zinc-300 block mb-1">
                     PIN / Passwort
