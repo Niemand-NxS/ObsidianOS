@@ -29,21 +29,27 @@ const DEFAULT_SETTINGS: PersonalizationSettings = {
   iconGlassBlur: 20,
   iconRadius: 'rounded-2xl',
   iconGlow: true,
-  wallpaper: 'obsidian-deep',
+  wallpaper: 'obsidian-dark',
   accentColor: 'violet-classic',
-  desktopWallpaperMode: 'shader',
-  desktopShaderId: 'shader-obsidian',
+  desktopWallpaperMode: 'photo',
+  desktopPhotoId: 'photo-obsidian-dark',
   desktopBlur: 0,
   desktopDimming: 0,
   desktopShowGlanceWidget: true,
-  desktopGlancePosition: { x: 28, y: 28 },
+  desktopGlancePosition: {
+    x: 28,
+    y: typeof window !== 'undefined' ? Math.max(100, window.innerHeight - 220) : 560,
+  },
   desktopGlanceStyle: 'glass-compact',
+  desktopWidgetType: 'clock',
+  desktopQuickNoteText: 'ObsidianOS Schreibtisch: Klicke hier für schnelle Notizen.',
   desktopIconSize: 'medium',
   desktopGridSpacing: 'comfortable',
   desktopShowIconLabels: true,
   desktopIconClickMode: 'double',
   desktopPinnedAppIds: ['files', 'browser', 'notes', 'gallery', 'music', 'settings'],
-  lockscreenMode: 'random_photo',
+  lockscreenMode: 'fixed',
+  lockscreenFixedPhotoId: 'photo-obsidian-dark',
   lockscreenShaderId: 'shader-obsidian',
   lockscreenCategory: 'all',
   lockscreenBlur: 0,
@@ -128,6 +134,7 @@ interface OSContextType {
   createUser: (user: Omit<UserProfile, 'id' | 'createdAt' | 'lastLogin' | 'encryptionSalt'>) => UserProfile;
   updateUser: (userId: string, updates: Partial<UserProfile>) => void;
   deleteUser: (userId: string) => void;
+  deleteAccount: (userId?: string) => Promise<boolean>;
   switchUser: (userId: string) => void;
   completeSetup: (
     userData: {
@@ -143,6 +150,9 @@ interface OSContextType {
   loginExistingAccount: (userId: string, pin: string) => Promise<boolean>;
   openSetupAssistant: () => void;
   resetSetupState: () => void;
+  isStartupAnimationActive: boolean;
+  playStartupAnimation: () => void;
+  closeStartupAnimation: () => void;
 
   // Settings & Theme
   settings: PersonalizationSettings;
@@ -810,11 +820,15 @@ export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   );
 
   const logout = useCallback(() => {
-    setIsLocked(true);
+    // Clear session user from cookies and local storage
+    CookieStorage.clearSessionUser();
+    localStorage.removeItem('obsidian_current_user_id');
     setWindows([]);
     setActiveWindowId(null);
+    setIsLocked(true);
     sounds.playClose();
-  }, []);
+    addNotification('Abgemeldet', 'Du hast dich erfolgreich abgemeldet.', 'info', 'Sicherheit');
+  }, [sounds, addNotification]);
 
   const lockScreen = useCallback(() => {
     setIsLocked(true);
@@ -856,24 +870,71 @@ export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     [currentUser, addNotification]
   );
 
+  const deleteAccount = useCallback(
+    async (userId?: string): Promise<boolean> => {
+      const targetId = userId || currentUser?.id;
+      if (!targetId) return false;
+
+      const targetUser = users.find((u) => u.id === targetId);
+      const remaining = users.filter((u) => u.id !== targetId);
+
+      // Clean up Firestore data
+      try {
+        await FirebaseService.deleteUserData(targetId);
+        await FirebaseService.saveUsersRegistry(remaining);
+      } catch (err) {
+        console.error('Error deleting user data from cloud:', err);
+      }
+
+      sounds.playClose();
+
+      if (remaining.length > 0) {
+        setUsers(remaining);
+        if (currentUser?.id === targetId) {
+          // If the deleted account was currently logged in, switch session to the first remaining user
+          CookieStorage.clearSessionUser();
+          localStorage.removeItem('obsidian_current_user_id');
+          setWindows([]);
+          setActiveWindowId(null);
+          setCurrentUser(remaining[0]);
+          CookieStorage.setSessionUser(remaining[0].id);
+          setIsLocked(true);
+        }
+        addNotification(
+          'Account gelöscht',
+          `Das Benutzerkonto "${targetUser?.displayName || targetId}" wurde unwiderruflich gelöscht.`,
+          'info',
+          'Sicherheit'
+        );
+      } else {
+        // Last account was deleted: perform full clean reset to the setup assistant
+        setUsers([]);
+        setCurrentUser(null);
+        CookieStorage.resetSetupState();
+        localStorage.removeItem('obsidian_current_user_id');
+        localStorage.removeItem('obsidian_setup_completed');
+        setWindows([]);
+        setActiveWindowId(null);
+        setFiles(INITIAL_FILES);
+        setIsLocked(false);
+        setIsSetupCompleted(false);
+        addNotification(
+          'Account gelöscht',
+          'Dein Account wurde gelöscht. Das System wurde zurückgesetzt.',
+          'info',
+          'Sicherheit'
+        );
+      }
+      return true;
+    },
+    [currentUser, users, sounds, addNotification]
+  );
+
   const deleteUser = useCallback(
     (userId: string) => {
-      if (users.length <= 1) {
-        addNotification('Aktion nicht möglich', 'Das letzte verbleibende Benutzerkonto kann nicht gelöscht werden.', 'error', 'Profile');
-        return;
-      }
-      const remaining = users.filter((u) => u.id !== userId);
-      setUsers(remaining);
-      if (currentUser?.id === userId) {
-        setCurrentUser(remaining[0]);
-        CookieStorage.setSessionUser(remaining[0].id);
-      }
-      // Sync deletion with Firebase
-      FirebaseService.saveUsersRegistry(remaining).catch(() => {});
-      sounds.playClose();
-      addNotification('Profil gelöscht', 'Benutzerkonto wurde erfolgreich entfernt.', 'info', 'Profile');
+      deleteAccount(userId);
     },
-    [users, currentUser, sounds, addNotification]
+    [deleteAccount]
   );
 
   const switchUser = useCallback(
@@ -997,6 +1058,16 @@ export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     [users, sounds, addNotification]
   );
 
+  const [isStartupAnimationActive, setIsStartupAnimationActive] = useState<boolean>(false);
+
+  const playStartupAnimation = useCallback(() => {
+    setIsStartupAnimationActive(true);
+  }, []);
+
+  const closeStartupAnimation = useCallback(() => {
+    setIsStartupAnimationActive(false);
+  }, []);
+
   const openSetupAssistant = useCallback(() => {
     setIsSetupCompleted(false);
   }, []);
@@ -1009,7 +1080,28 @@ export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
   }, [addNotification]);
 
   const updateSettings = useCallback((updates: Partial<PersonalizationSettings>) => {
-    setSettings((prev) => ({ ...prev, ...updates }));
+    setSettings((prev) => {
+      const next = { ...prev, ...updates };
+      if (updates.themeMode && !updates.wallpaper) {
+        if (
+          prev.wallpaper === 'obsidian-dark' ||
+          prev.wallpaper === 'obsidian-light' ||
+          prev.wallpaper === 'obsidian-deep' ||
+          prev.wallpaper === 'obsidian-default' ||
+          prev.wallpaper === 'photo-obsidian-dark' ||
+          prev.wallpaper === 'photo-obsidian-light'
+        ) {
+          if (updates.themeMode === 'light') {
+            next.wallpaper = 'obsidian-light';
+            next.desktopPhotoId = 'photo-obsidian-light';
+          } else if (updates.themeMode === 'dark' || updates.themeMode === 'glassy') {
+            next.wallpaper = 'obsidian-dark';
+            next.desktopPhotoId = 'photo-obsidian-dark';
+          }
+        }
+      }
+      return next;
+    });
   }, []);
 
   const desktopPinnedAppIds = useMemo(() => {
@@ -2042,11 +2134,15 @@ export const OSProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     createUser,
     updateUser,
     deleteUser,
+    deleteAccount,
     switchUser,
     completeSetup,
     loginExistingAccount,
     openSetupAssistant,
     resetSetupState,
+    isStartupAnimationActive,
+    playStartupAnimation,
+    closeStartupAnimation,
 
     settings,
     accentConfig,

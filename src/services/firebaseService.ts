@@ -276,6 +276,23 @@ export const FirebaseService = {
     }
   },
 
+  // Delete user document and vault from Firestore
+  async deleteUserData(userId: string) {
+    const docPath = `obsidian_users_data/${userId}`;
+    try {
+      await this.ensureAuth();
+      const userDocRef = doc(db, 'obsidian_users_data', userId);
+      await deleteDoc(userDocRef);
+
+      const vaultDocRef = doc(db, 'obsidian_sync_vaults', userId);
+      await deleteDoc(vaultDocRef);
+      return { success: true };
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.DELETE, docPath);
+      return { success: false, error: err?.message };
+    }
+  },
+
   // Fetch the central user accounts registry from Firestore
   async fetchUsersRegistry(): Promise<{ success: boolean; users?: UserProfile[] }> {
     const docPath = 'obsidian_users_data/system_registry';

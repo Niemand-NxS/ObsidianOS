@@ -1,8 +1,13 @@
 @import "tailwindcss";
+@import url('https://api.fontshare.com/v2/css?f[]=kola@400&display=swap');
 
 @layer base {
   * {
     box-sizing: border-box;
+  }
+  
+  html, body {
+    font-family: 'Fredoka', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   }
   
   ::selection {
@@ -35,7 +40,7 @@
 }
 
 .font-sans {
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Fredoka', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Custom Scrollbar Helper */
@@ -84,38 +89,43 @@
 .theme-light {
   color-scheme: light;
   --os-surface: #ffffff;
-  --os-surface-subtle: #f8fafc;
-  --os-border: #e2e8f0;
-  --os-text-primary: #0f172a;
-  --os-text-secondary: #334155;
-  --os-text-muted: #64748b;
-  --os-glass-card-bg: rgba(255, 255, 255, 0.95);
-  --os-glass-card-border: rgba(0, 0, 0, 0.1);
-  --os-glass-dock-bg: rgba(255, 255, 255, 0.9);
-  --os-glass-text: #0f172a;
+  --os-surface-subtle: #f1f5f9;
+  --os-border: #cbd5e1;
+  --os-text-primary: #09090b;
+  --os-text-secondary: #1e293b;
+  --os-text-muted: #475569;
+  --os-glass-card-bg: rgba(255, 255, 255, 0.96);
+  --os-glass-card-border: rgba(0, 0, 0, 0.15);
+  --os-glass-dock-bg: rgba(255, 255, 255, 0.94);
+  --os-glass-text: #09090b;
+}
+
+.theme-light, 
+.theme-light body {
+  color: #09090b;
 }
 
 .theme-light .glass-panel {
-  background: rgba(255, 255, 255, 0.94);
-  border-color: rgba(0, 0, 0, 0.1);
-  color: #0f172a;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.14);
+  color: #09090b;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08), 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
 .theme-light .glass-panel-dock {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(0, 0, 0, 0.12);
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12), 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
 .theme-light .custom-scrollbar::-webkit-scrollbar-thumb,
 .theme-light ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.16);
+  background: rgba(0, 0, 0, 0.22);
 }
 
 .theme-light .custom-scrollbar::-webkit-scrollbar-thumb:hover,
 .theme-light ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.4);
 }
 
 /* =========================================================================

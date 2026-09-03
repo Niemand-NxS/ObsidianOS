@@ -196,7 +196,8 @@ export type LockscreenCategory =
   | 'cyberpunk'
   | 'architecture'
   | 'ocean_aurora'
-  | 'minimal_nature';
+  | 'minimal_nature'
+  | 'abstract';
 
 export type ClockFont =
   | 'sans-ultralight'
@@ -262,6 +263,8 @@ export interface PersonalizationSettings {
   desktopShowGlanceWidget?: boolean;
   desktopGlancePosition?: { x: number; y: number };
   desktopGlanceStyle?: 'glass-compact' | 'glass-expanded' | 'minimal-pill';
+  desktopWidgetType?: 'clock' | 'weather' | 'system' | 'notes' | 'player' | 'crypto' | 'battery' | 'pomodoro' | 'quote';
+  desktopQuickNoteText?: string;
   desktopIconSize?: DesktopIconSize;
   desktopGridSpacing?: DesktopGridSpacing;
   desktopShowIconLabels?: boolean;

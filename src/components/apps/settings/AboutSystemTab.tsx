@@ -3,7 +3,7 @@ import { useOS } from '../../../context/OSContext';
 import { Cpu, Sparkles, Terminal, Activity, Layers, Heart, Globe, ShieldCheck } from 'lucide-react';
 
 export const AboutSystemTab: React.FC = () => {
-  const { accentConfig, systemBootTime, openSetupAssistant, sounds } = useOS();
+  const { accentConfig, systemBootTime, openSetupAssistant, playStartupAnimation, sounds } = useOS();
   const [uptimeSeconds, setUptimeSeconds] = useState(() =>
     Math.max(0, Math.floor((Date.now() - systemBootTime) / 1000))
   );

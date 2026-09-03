@@ -8,6 +8,7 @@ import {
   Volume2,
   Lock,
   LogOut,
+  User,
   Sparkles,
   Calendar as CalendarIcon,
   Plus,
@@ -48,6 +49,7 @@ export const TopBar: React.FC = () => {
     isControlCenterOpen,
     lockScreen,
     logout,
+    playStartupAnimation,
     accentConfig,
     addNotification,
     sounds,
@@ -266,6 +268,17 @@ export const TopBar: React.FC = () => {
                 >
                   <LogOut className="w-3.5 h-3.5 text-red-500" />
                   Abmelden ({currentUser?.displayName})
+                </button>
+
+                <button
+                  onClick={() => {
+                    openApp('settings');
+                    setOpenMenu(null);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-xl text-zinc-400 hover:bg-white/[0.06] hover:text-white transition-colors text-left text-xs"
+                >
+                  <User className="w-3.5 h-3.5 text-zinc-400" />
+                  Account verwalten & Sicherheit...
                 </button>
               </motion.div>
             )}

@@ -1,6 +1,43 @@
 import { LockscreenPhoto, LockscreenCategory } from '../types';
+import { OBSIDIAN_DEFAULT_WALLPAPERS } from './defaultWallpapers';
 
 export const LOCKSCREEN_WALLPAPERS: LockscreenPhoto[] = [
+  {
+    id: 'photo-obsidian-dark',
+    title: 'Obsidian Kristall (Dunkel)',
+    category: 'all',
+    url: OBSIDIAN_DEFAULT_WALLPAPERS.dark,
+    thumbUrl: OBSIDIAN_DEFAULT_WALLPAPERS.dark,
+    location: 'ObsidianOS Default',
+    photographer: 'Obsidian Studio',
+  },
+  {
+    id: 'photo-obsidian-light',
+    title: 'Obsidian Kristall (Hell)',
+    category: 'all',
+    url: OBSIDIAN_DEFAULT_WALLPAPERS.light,
+    thumbUrl: OBSIDIAN_DEFAULT_WALLPAPERS.light,
+    location: 'ObsidianOS Default',
+    photographer: 'Obsidian Studio',
+  },
+  {
+    id: 'photo-user-colorful',
+    title: 'Korn & Farbspektrum (Upload)',
+    category: 'abstract',
+    url: OBSIDIAN_DEFAULT_WALLPAPERS.userColorful,
+    thumbUrl: OBSIDIAN_DEFAULT_WALLPAPERS.userColorful,
+    location: 'Eigene Bilder (3840×2160)',
+    photographer: 'Benutzer-Upload',
+  },
+  {
+    id: 'photo-user-dark-purple',
+    title: 'Dunkelviolette Körnung (Upload)',
+    category: 'abstract',
+    url: OBSIDIAN_DEFAULT_WALLPAPERS.userDarkPurple,
+    thumbUrl: OBSIDIAN_DEFAULT_WALLPAPERS.userDarkPurple,
+    location: 'Eigene Bilder (7759×4376)',
+    photographer: 'Benutzer-Upload',
+  },
   {
     id: 'photo-dolomites',
     title: 'Dolomiten Nebelgipfel',

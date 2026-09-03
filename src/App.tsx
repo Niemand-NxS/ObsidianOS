@@ -8,6 +8,7 @@ import { Spotlight } from './components/system/Spotlight';
 import { ControlCenter } from './components/system/ControlCenter';
 import { LockScreen } from './components/system/LockScreen';
 import { SetupAssistant } from './components/system/SetupAssistant';
+import { CrystalWelcomeScreen } from './components/system/CrystalWelcomeScreen';
 import { DesktopGlance } from './components/system/DesktopGlance';
 import { AppQuickSettings } from './components/system/AppQuickSettings';
 import { APPS_REGISTRY } from './config/themeConfig';
@@ -163,6 +164,8 @@ const DesktopContent: React.FC = () => {
     customApps,
     isLocked,
     isSetupCompleted,
+    isStartupAnimationActive,
+    closeStartupAnimation,
     snapPreview: windowSnapPreview,
     effectiveTheme,
     effectiveGlassContrast,
@@ -676,6 +679,19 @@ const DesktopContent: React.FC = () => {
         ) : isLocked ? (
           <LockScreen key="lockscreen-overlay" />
         ) : null}
+      </AnimatePresence>
+
+      {/* Standalone / Replayable Crystal macOS-like Startup Animation */}
+      <AnimatePresence>
+        {isStartupAnimationActive && (
+          <CrystalWelcomeScreen
+            key="crystal-boot-screen"
+            onStart={closeStartupAnimation}
+            onClose={closeStartupAnimation}
+            accentColor={accentConfig.primary}
+            isStandalone={true}
+          />
+        )}
       </AnimatePresence>
     </div>
   );

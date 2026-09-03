@@ -13,7 +13,7 @@ export const AVATAR_PRESETS: AvatarPreset[] = [
     url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
   },
   {
-    id: 'avatar-portrait-lia',
+    id: 'avatar-portrait-creative',
     name: 'Modern Creative',
     category: 'portrait',
     url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80',

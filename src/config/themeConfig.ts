@@ -130,6 +130,18 @@ export const WALLPAPERS: Array<{
   previewGradient: string;
 }> = [
   {
+    id: 'photo-user-colorful',
+    name: 'Korn & Farbspektrum (Upload)',
+    description: 'Hochauflösendes abstraktes Farbspektrum mit feiner organischer Körnung (3840×2160)',
+    previewGradient: 'linear-gradient(135deg, #f97316 0%, #ec4899 40%, #8b5cf6 80%, #3b82f6 100%)',
+  },
+  {
+    id: 'photo-user-dark-purple',
+    name: 'Dunkelviolette Körnung (Upload)',
+    description: 'Tiefes, edles Dunkelviolett mit stimmungsvoller Filmkörnung (7759×4376)',
+    previewGradient: 'radial-gradient(circle at center, #3b0764 0%, #1c052e 50%, #09090b 100%)',
+  },
+  {
     id: 'shader-obsidian',
     name: 'WebGL Obsidian Quantum (Shader)',
     description: 'Echtzeit-GLSL-Shader mit lumineszierenden Plasma-Filamenten & Mausinteraktion',

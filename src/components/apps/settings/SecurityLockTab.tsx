@@ -2,7 +2,21 @@ import React, { useState, useRef } from 'react';
 import { useOS } from '../../../context/OSContext';
 import { AVATAR_PRESETS } from '../../../config/avatarPresets';
 import { UserAvatar } from '../../common/UserAvatar';
-import { Lock, Key, Shield, Clock, User, Upload, Check, AlertCircle } from 'lucide-react';
+import {
+  Lock,
+  Key,
+  Shield,
+  Clock,
+  User,
+  Upload,
+  Check,
+  AlertCircle,
+  LogOut,
+  Trash2,
+  AlertTriangle,
+  X,
+  RefreshCw,
+} from 'lucide-react';
 
 export const SecurityLockTab: React.FC = () => {
   const {
@@ -10,6 +24,9 @@ export const SecurityLockTab: React.FC = () => {
     updateSettings,
     currentUser,
     updateUser,
+    logout,
+    deleteAccount,
+    users,
     accentConfig,
     sounds,
     addNotification,
@@ -21,6 +38,12 @@ export const SecurityLockTab: React.FC = () => {
   const [displayNameInput, setDisplayNameInput] = useState(currentUser?.displayName || '');
   const [bioInput, setBioInput] = useState(currentUser?.bio || '');
   const [avatarUploadError, setAvatarUploadError] = useState<string | null>(null);
+
+  // Account Deletion Modal States
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [targetDeleteUser, setTargetDeleteUser] = useState<typeof currentUser | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -104,12 +127,36 @@ export const SecurityLockTab: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  const openDeleteModalFor = (userToDelete: typeof currentUser) => {
+    setTargetDeleteUser(userToDelete);
+    setDeleteConfirmText('');
+    setShowDeleteModal(true);
+    sounds.playClick();
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!targetDeleteUser) return;
+    setIsDeleting(true);
+    try {
+      await deleteAccount(targetDeleteUser.id);
+      setShowDeleteModal(false);
+    } catch {
+      sounds.playError();
+      addNotification('Fehler beim Löschen', 'Konnte das Benutzerkonto nicht vollständig entfernen.', 'error');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const isCurrentAccountTarget = targetDeleteUser?.id === currentUser?.id;
+  const isOnlyAccount = users.length <= 1;
+
   return (
     <div className="space-y-6 text-zinc-200">
       <div>
         <h2 className="text-base font-semibold text-white tracking-tight">Sicherheit & Benutzerprofil</h2>
         <p className="text-xs text-zinc-400 mt-0.5">
-          PIN-Schutz, Inaktivitäts-Sperre und Personalisierung deines Benutzerkontos.
+          PIN-Schutz, Inaktivitäts-Sperre, Sitzungsverwaltung und Account-Optionen.
         </p>
       </div>
 
@@ -314,6 +361,170 @@ export const SecurityLockTab: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* 4. Active Session & Logout */}
+      <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <LogOut className="w-4 h-4 text-purple-400" />
+            <div>
+              <span className="text-xs font-semibold text-zinc-200 block">Sitzung & Abmeldung</span>
+              <span className="text-[11px] text-zinc-400">
+                Angemeldet als <strong className="text-white">{currentUser?.displayName || 'Benutzer'}</strong> (@{currentUser?.username})
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              sounds.playClick();
+              logout();
+            }}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white/[0.08] hover:bg-red-500/20 text-zinc-200 hover:text-red-300 border border-white/10 hover:border-red-500/30 transition-all shadow-sm active:scale-95"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Abmelden
+          </button>
+        </div>
+        <p className="text-[11px] text-zinc-500 leading-relaxed">
+          Das Abmelden beendet deine aktuelle Arbeitssitzung, schließt offene Anwendungsfenster und führt zum Sperrbildschirm. Deine Dateien, Notizen und Einstellungen bleiben dauerhaft gespeichert.
+        </p>
+      </div>
+
+      {/* 5. Danger Zone: Delete Account */}
+      <div className="p-4 rounded-xl bg-red-500/[0.03] border border-red-500/20 space-y-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-start gap-2.5">
+            <Trash2 className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
+            <div>
+              <span className="text-xs font-semibold text-red-300 block">Account löschen</span>
+              <p className="text-[11px] text-zinc-400 mt-0.5 leading-relaxed">
+                Entfernt dieses Benutzerkonto unwiderruflich von diesem Gerät sowie aus der Cloud-Synchronisation.
+                {isOnlyAccount
+                  ? ' Da dies das einzige Konto ist, wird ObsidianOS vollständig zurückgesetzt und der Setup-Assistent neu gestartet.'
+                  : ` Es verbleiben noch ${users.length - 1} andere(s) Benutzerkonto(en).`}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => openDeleteModalFor(currentUser)}
+            className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-500/20 hover:bg-red-500 text-red-200 hover:text-white border border-red-500/40 transition-all shadow-sm active:scale-95"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Account löschen
+          </button>
+        </div>
+
+        {/* Other Users list if Administrator */}
+        {currentUser?.role === 'Administrator' && users.length > 1 && (
+          <div className="pt-3 border-t border-red-500/10 space-y-2">
+            <span className="text-[11px] text-zinc-400 font-medium block">
+              Andere Benutzerkonten verwalten (Administrator):
+            </span>
+            <div className="space-y-1.5">
+              {users
+                .filter((u) => u.id !== currentUser.id)
+                .map((otherUser) => (
+                  <div
+                    key={otherUser.id}
+                    className="flex items-center justify-between p-2 rounded-lg bg-black/30 border border-white/[0.05]"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <UserAvatar user={otherUser} size="sm" />
+                      <div>
+                        <span className="text-xs text-zinc-200 font-medium block">{otherUser.displayName}</span>
+                        <span className="text-[10px] text-zinc-500 font-mono">@{otherUser.username} • {otherUser.role}</span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => openDeleteModalFor(otherUser)}
+                      className="p-1.5 rounded-md hover:bg-red-500/20 text-zinc-400 hover:text-red-300 transition-colors"
+                      title={`Account "${otherUser.displayName}" löschen`}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Confirmation Modal */}
+      {showDeleteModal && targetDeleteUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fade-in">
+          <div className="w-full max-w-md bg-[#161622] border border-red-500/30 rounded-2xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5 text-red-400">
+                <AlertTriangle className="w-5 h-5 shrink-0" />
+                <h3 className="text-sm font-bold text-white">Account wirklich löschen?</h3>
+              </div>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Target User Info */}
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-black/40 border border-white/[0.08]">
+              <UserAvatar user={targetDeleteUser} size="md" />
+              <div>
+                <span className="text-xs font-semibold text-white block">{targetDeleteUser.displayName}</span>
+                <span className="text-[11px] text-zinc-400 font-mono">@{targetDeleteUser.username}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-300 leading-relaxed">
+              Diese Aktion ist <strong className="text-red-300">endgültig und unwiderruflich</strong>. Alle zugehörigen persönlichen Dokumente, Ordner, Notizen und Passwörter werden dauerhaft gelöscht.
+            </p>
+
+            {isOnlyAccount && (
+              <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200/90 leading-relaxed">
+                ⚠️ Hinweis: Dies ist der letzte Account auf dem System. Nach dem Löschen kehrt ObsidianOS zum Setup-Assistenten zurück.
+              </div>
+            )}
+
+            <div>
+              <label className="text-[11px] text-zinc-400 block mb-1.5">
+                Gib zur Bestätigung den Account-Namen <strong className="text-white font-mono">{targetDeleteUser.username}</strong> ein:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder={targetDeleteUser.username}
+                className="w-full bg-black/50 border border-red-500/30 rounded-lg px-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-red-500 font-mono"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                disabled={isDeleting}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={deleteConfirmText.trim().toLowerCase() !== targetDeleteUser.username.toLowerCase() || isDeleting}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white shadow-lg transition-all active:scale-95"
+              >
+                {isDeleting ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5" />
+                )}
+                <span>{isDeleting ? 'Wird gelöscht...' : 'Unwiderruflich löschen'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

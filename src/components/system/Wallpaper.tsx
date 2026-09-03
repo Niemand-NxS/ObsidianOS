@@ -2,19 +2,29 @@ import React, { useMemo } from 'react';
 import { useOS } from '../../context/OSContext';
 import { ShaderWallpaper } from './ShaderWallpaper';
 import { LOCKSCREEN_WALLPAPERS } from '../../config/lockscreenWallpapers';
+import { OBSIDIAN_DEFAULT_WALLPAPERS } from '../../config/defaultWallpapers';
 import { AnimatePresence, motion } from 'motion/react';
 
 export const Wallpaper: React.FC = () => {
   const { settings, accentConfig } = useOS();
 
+  // Explicit photo check or obsidian default wallpapers
+  const isObsidianDefault =
+    settings.wallpaper === 'obsidian-dark' ||
+    settings.wallpaper === 'obsidian-light' ||
+    settings.wallpaper === 'photo-obsidian-dark' ||
+    settings.wallpaper === 'photo-obsidian-light' ||
+    settings.wallpaper === 'obsidian-default';
+
   // Mode detection
-  const isExplicitShader = settings.desktopWallpaperMode === 'shader';
-  const isExplicitPhoto = settings.desktopWallpaperMode === 'photo';
+  const isExplicitShader = settings.desktopWallpaperMode === 'shader' && !isObsidianDefault;
+  const isExplicitPhoto = settings.desktopWallpaperMode === 'photo' || isObsidianDefault;
 
   // Check if wallpaper is a shader
   const isShader =
-    isExplicitShader ||
-    (!isExplicitPhoto && (settings.wallpaper.startsWith('shader-') || settings.wallpaper === 'obsidian-deep'));
+    !isObsidianDefault &&
+    (isExplicitShader ||
+      (!isExplicitPhoto && (settings.wallpaper.startsWith('shader-') || settings.wallpaper === 'obsidian-deep')));
   const effectiveShaderId = settings.wallpaper.startsWith('shader-')
     ? settings.wallpaper
     : 'shader-obsidian';
@@ -24,6 +34,45 @@ export const Wallpaper: React.FC = () => {
     if (isShader) {
       return null;
     }
+
+    // Direct obsidian wallpaper mapping
+    if (settings.wallpaper === 'obsidian-light' || settings.wallpaper === 'photo-obsidian-light') {
+      return {
+        id: 'photo-obsidian-light',
+        url: OBSIDIAN_DEFAULT_WALLPAPERS.light,
+        title: 'Obsidian Kristall (Hell)',
+      };
+    }
+    if (settings.wallpaper === 'obsidian-dark' || settings.wallpaper === 'photo-obsidian-dark') {
+      return {
+        id: 'photo-obsidian-dark',
+        url: OBSIDIAN_DEFAULT_WALLPAPERS.dark,
+        title: 'Obsidian Kristall (Dunkel)',
+      };
+    }
+    if (settings.wallpaper === 'user-colorful' || settings.wallpaper === 'photo-user-colorful') {
+      return {
+        id: 'photo-user-colorful',
+        url: OBSIDIAN_DEFAULT_WALLPAPERS.userColorful,
+        title: 'Korn & Farbspektrum (Upload)',
+      };
+    }
+    if (settings.wallpaper === 'user-dark-purple' || settings.wallpaper === 'photo-user-dark-purple') {
+      return {
+        id: 'photo-user-dark-purple',
+        url: OBSIDIAN_DEFAULT_WALLPAPERS.userDarkPurple,
+        title: 'Dunkelviolette Körnung (Upload)',
+      };
+    }
+    if (settings.wallpaper === 'obsidian-default') {
+      const isLight = settings.themeMode === 'light';
+      return {
+        id: isLight ? 'photo-obsidian-light' : 'photo-obsidian-dark',
+        url: isLight ? OBSIDIAN_DEFAULT_WALLPAPERS.light : OBSIDIAN_DEFAULT_WALLPAPERS.dark,
+        title: isLight ? 'Obsidian Kristall (Hell)' : 'Obsidian Kristall (Dunkel)',
+      };
+    }
+
     if (settings.desktopCustomPhotoUrl) {
       return {
         id: 'custom',
@@ -64,11 +113,16 @@ export const Wallpaper: React.FC = () => {
     ].includes(settings.wallpaper);
 
     if (!isLegacyGradient && !isShader) {
-      return LOCKSCREEN_WALLPAPERS[0];
+      const isLight = settings.themeMode === 'light';
+      return {
+        id: isLight ? 'photo-obsidian-light' : 'photo-obsidian-dark',
+        url: isLight ? OBSIDIAN_DEFAULT_WALLPAPERS.light : OBSIDIAN_DEFAULT_WALLPAPERS.dark,
+        title: isLight ? 'Obsidian Kristall (Hell)' : 'Obsidian Kristall (Dunkel)',
+      };
     }
 
     return null;
-  }, [settings.wallpaper, settings.desktopPhotoId, settings.desktopCustomPhotoUrl, settings.desktopWallpaperMode, isShader]);
+  }, [settings.wallpaper, settings.desktopPhotoId, settings.desktopCustomPhotoUrl, settings.desktopWallpaperMode, settings.themeMode, isShader]);
 
   const blurPx = settings.desktopBlur ?? 0;
   const dimmingPct = settings.desktopDimming ?? 25;

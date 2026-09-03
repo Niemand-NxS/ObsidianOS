@@ -14,6 +14,9 @@ import {
   UserPlus,
   Cloud,
   Shield,
+  Trash2,
+  AlertTriangle,
+  X,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { sounds } from '../../services/soundService';
@@ -32,6 +35,8 @@ export const LockScreen: React.FC = () => {
     accentConfig,
     settings,
     openSetupAssistant,
+    playStartupAnimation,
+    deleteAccount,
   } = useOS();
 
   // Filter out any unwanted guest accounts if needed
@@ -53,6 +58,11 @@ export const LockScreen: React.FC = () => {
   const [secondsStr, setSecondsStr] = useState('');
   const [dateStr, setDateStr] = useState('');
   const [showPhotoCredits, setShowPhotoCredits] = useState(false);
+
+  // Lockscreen Account Deletion Modal
+  const [userToDeleteFromLock, setUserToDeleteFromLock] = useState<typeof currentUser | null>(null);
+  const [lockDeleteConfirmText, setLockDeleteConfirmText] = useState('');
+  const [isLockDeleting, setIsLockDeleting] = useState(false);
 
   // Active Lockscreen Photo Wallpaper index / state
   const filteredWallpapers = useMemo(() => {
@@ -681,7 +691,20 @@ export const LockScreen: React.FC = () => {
               )}
 
               <div className="flex items-center justify-between text-[11px] text-white/60 font-mono pt-1 drop-shadow">
-                <span>Drücke Enter</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedUser) {
+                      setUserToDeleteFromLock(selectedUser);
+                      setLockDeleteConfirmText('');
+                      sounds.playClick();
+                    }
+                  }}
+                  className="text-red-300/80 hover:text-red-300 hover:underline flex items-center gap-1"
+                >
+                  <Trash2 className="w-3 h-3" />
+                  Account löschen
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -768,6 +791,18 @@ export const LockScreen: React.FC = () => {
           <button
             onClick={() => {
               sounds.playClick();
+              playStartupAnimation();
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-2xl border border-white/15 text-white/80 hover:text-white text-xs font-medium transition-all shadow-md"
+            title="Kristalline macOS Startanimation abspielen"
+          >
+            <Sparkles className="w-3 h-3 text-cyan-400" />
+            <span>Startanimation</span>
+          </button>
+
+          <button
+            onClick={() => {
+              sounds.playClick();
               openSetupAssistant();
             }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-2xl border border-white/15 text-white/80 hover:text-white text-xs font-medium transition-all shadow-md"
@@ -790,6 +825,91 @@ export const LockScreen: React.FC = () => {
           </span>
         </div>
       </div>
+
+      {/* Lockscreen Account Deletion Modal */}
+      {userToDeleteFromLock && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="w-full max-w-md bg-[#161622] border border-red-500/30 rounded-2xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5 text-red-400">
+                <AlertTriangle className="w-5 h-5 shrink-0" />
+                <h3 className="text-sm font-bold text-white">Account wirklich löschen?</h3>
+              </div>
+              <button
+                onClick={() => setUserToDeleteFromLock(null)}
+                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-black/40 border border-white/[0.08]">
+              <UserAvatar user={userToDeleteFromLock} size="md" />
+              <div>
+                <span className="text-xs font-semibold text-white block">{userToDeleteFromLock.displayName}</span>
+                <span className="text-[11px] text-zinc-400 font-mono">@{userToDeleteFromLock.username}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-zinc-300 leading-relaxed">
+              Möchtest du das Benutzerkonto <strong className="text-white">"{userToDeleteFromLock.displayName}"</strong> wirklich dauerhaft von diesem System entfernen? Alle lokalen und Cloud-Daten dieses Accounts werden gelöscht.
+            </p>
+
+            {userList.length <= 1 && (
+              <div className="p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200/90 leading-relaxed">
+                ⚠️ Hinweis: Dies ist das einzige Konto. Nach dem Löschen wird das System zurückgesetzt und der Setup-Assistent startet.
+              </div>
+            )}
+
+            <div>
+              <label className="text-[11px] text-zinc-400 block mb-1.5">
+                Tippe <strong className="text-white font-mono">{userToDeleteFromLock.username}</strong> ein, um zu bestätigen:
+              </label>
+              <input
+                type="text"
+                value={lockDeleteConfirmText}
+                onChange={(e) => setLockDeleteConfirmText(e.target.value)}
+                placeholder={userToDeleteFromLock.username}
+                className="w-full bg-black/50 border border-red-500/30 rounded-lg px-3 py-2 text-xs text-white placeholder:text-zinc-600 focus:outline-none focus:border-red-500 font-mono"
+                autoFocus
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
+              <button
+                type="button"
+                onClick={() => setUserToDeleteFromLock(null)}
+                disabled={isLockDeleting}
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-zinc-300 hover:text-white hover:bg-white/[0.08] transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (!userToDeleteFromLock) return;
+                  setIsLockDeleting(true);
+                  try {
+                    await deleteAccount(userToDeleteFromLock.id);
+                    setUserToDeleteFromLock(null);
+                  } catch {} finally {
+                    setIsLockDeleting(false);
+                  }
+                }}
+                disabled={lockDeleteConfirmText.trim().toLowerCase() !== userToDeleteFromLock.username.toLowerCase() || isLockDeleting}
+                className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white shadow-lg transition-all active:scale-95"
+              >
+                {isLockDeleting ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="w-3.5 h-3.5" />
+                )}
+                <span>{isLockDeleting ? 'Wird gelöscht...' : 'Account löschen'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 };

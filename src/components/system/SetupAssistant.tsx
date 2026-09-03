@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useOS } from '../../context/OSContext';
 import { AVATAR_PRESETS } from '../../config/avatarPresets';
 import { ACCENT_COLORS, WALLPAPERS } from '../../config/themeConfig';
+import { OBSIDIAN_DEFAULT_WALLPAPERS } from '../../config/defaultWallpapers';
 import {
   Globe,
   Accessibility,
@@ -41,6 +42,7 @@ import { AccentColorId, WallpaperId, ClockFont, UserProfile } from '../../types'
 import { FirebaseService } from '../../services/firebaseService';
 import { OpticIDScanner } from './OpticIDScanner';
 import { LicenseAgreementModal } from './LicenseAgreementModal';
+import { CrystalWelcomeScreen } from './CrystalWelcomeScreen';
 
 interface SetupAssistantProps {
   onComplete?: () => void;
@@ -80,6 +82,7 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
   } = useOS();
 
   const [currentStep, setCurrentStep] = useState<SetupStep>(1);
+  const [showWelcomeIntro, setShowWelcomeIntro] = useState<boolean>(true);
 
   // Synced cloud accounts list for direct login or migration
   const [cloudUsers, setCloudUsers] = useState<UserProfile[]>(users);
@@ -212,12 +215,12 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordHint, setPasswordHint] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [termsAccepted, setTermsAccepted] = useState(true);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(AVATAR_PRESETS[0].url);
   const [formError, setFormError] = useState('');
 
-  // Auto-generate short account name (e.g. "Lia Clu" -> "liaclu")
+  // Auto-generate short account name (e.g. "Alex Thorne" -> "alex")
   const handleFullNameChange = (val: string) => {
     setFullName(val);
     const slug = val
@@ -267,9 +270,9 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
   // -------------------------------------------------------------
   // STEP 8: Personalisierung & Finale
   // -------------------------------------------------------------
-  const [themeMode, setThemeMode] = useState<'dark' | 'light' | 'glassy' | 'auto'>('glassy');
+  const [themeMode, setThemeMode] = useState<'dark' | 'light' | 'glassy' | 'auto'>('dark');
   const [selectedAccent, setSelectedAccent] = useState<AccentColorId>('violet-classic');
-  const [selectedWallpaper, setSelectedWallpaper] = useState<WallpaperId>('obsidian-deep');
+  const [selectedWallpaper, setSelectedWallpaper] = useState<WallpaperId>('obsidian-dark');
   const [isFinalizing, setIsFinalizing] = useState(false);
 
   // Load cloud accounts for direct login
@@ -348,6 +351,15 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
     sounds.playSuccess();
 
     try {
+      const finalWallpaper: WallpaperId =
+        selectedWallpaper || (themeMode === 'light' ? 'obsidian-light' : 'obsidian-dark');
+      const finalPhotoId =
+        selectedWallpaper.startsWith('photo-')
+          ? selectedWallpaper
+          : themeMode === 'light'
+          ? 'photo-obsidian-light'
+          : 'photo-obsidian-dark';
+
       await completeSetup(
         {
           displayName: fullName.trim() || 'Obsidian Benutzer',
@@ -360,7 +372,11 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
         {
           themeMode: themeMode,
           accentColor: selectedAccent,
-          wallpaper: selectedWallpaper,
+          wallpaper: finalWallpaper,
+          desktopWallpaperMode: 'photo',
+          desktopPhotoId: finalPhotoId,
+          lockscreenMode: 'fixed',
+          lockscreenFixedPhotoId: finalPhotoId,
           soundEffects: true,
         }
       );
@@ -404,38 +420,86 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
     8: { title: 'Personalisierung & Finale', subtitle: 'UI-Erscheinungsbild und Systemstart' },
   };
 
-  // Generic background image with blur and noise as specified
-  const genericBgUrl =
-    'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2560&auto=format&fit=crop';
+  // Theme mode detection for dynamic transitions
+  const isLightTheme = themeMode === 'light';
+  const isGlassyTheme = themeMode === 'glassy';
+
+  // Wallpaper dynamically adapts based on theme mode and wallpaper selection
+  const assistantBgUrl = useMemo(() => {
+    if (selectedWallpaper === 'photo-user-colorful' || selectedWallpaper === 'user-colorful') {
+      return OBSIDIAN_DEFAULT_WALLPAPERS.userColorful;
+    }
+    if (selectedWallpaper === 'photo-user-dark-purple' || selectedWallpaper === 'user-dark-purple') {
+      return OBSIDIAN_DEFAULT_WALLPAPERS.userDarkPurple;
+    }
+    if (themeMode === 'light') {
+      return OBSIDIAN_DEFAULT_WALLPAPERS.light;
+    }
+    return OBSIDIAN_DEFAULT_WALLPAPERS.dark;
+  }, [themeMode, selectedWallpaper]);
+
   const noiseSvgData =
     "data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E";
 
+  // Dynamic card container classes based on selected theme
+  const cardContainerClass = isLightTheme
+    ? 'bg-white/85 border border-black/10 shadow-[0_30px_100px_rgba(0,0,0,0.28)] text-zinc-900 backdrop-blur-2xl'
+    : isGlassyTheme
+    ? 'bg-white/10 border border-white/20 shadow-[0_30px_100px_rgba(0,0,0,0.55)] text-white backdrop-blur-3xl'
+    : 'bg-[#141520]/80 border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.85)] text-zinc-100 backdrop-blur-3xl';
+
+  if (showWelcomeIntro) {
+    return (
+      <CrystalWelcomeScreen
+        onStart={() => setShowWelcomeIntro(false)}
+        accentColor={accentConfig.primary}
+      />
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 select-none overflow-hidden font-sans">
-      {/* Background: Generic selected image with blur and noise */}
+      {/* Background: Obsidian wallpaper that adapts to Hell / Dunkel / Glassy */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <img
-          src={genericBgUrl}
-          alt="Obsidian Background"
-          className="absolute inset-0 w-full h-full object-cover filter blur-[28px] scale-110 opacity-70"
-        />
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={assistantBgUrl}
+            src={assistantBgUrl}
+            alt="Obsidian Background"
+            initial={{ opacity: 0, scale: 1.05 }}
+            animate={{ opacity: isLightTheme ? 0.85 : 0.72, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: 'easeInOut' }}
+            className="absolute inset-0 w-full h-full object-cover filter blur-[22px] scale-105"
+          />
+        </AnimatePresence>
         {/* Soft Noise Overlay Texture */}
         <div
-          className="absolute inset-0 mix-blend-overlay opacity-30 pointer-events-none"
+          className="absolute inset-0 mix-blend-overlay opacity-25 pointer-events-none"
           style={{ backgroundImage: `url("${noiseSvgData}")` }}
         />
         {/* Vignette Depth Gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/45 to-black/80" />
+        <div
+          className={`absolute inset-0 transition-colors duration-700 ${
+            isLightTheme
+              ? 'bg-gradient-to-b from-white/20 via-black/10 to-black/35'
+              : 'bg-gradient-to-b from-black/25 via-black/45 to-black/80'
+          }`}
+        />
       </div>
 
-      {/* Top Floating Action: Direct Login Button */}
-      <div className="absolute top-5 right-6 z-20">
+      {/* Top Floating Actions: Direct Login Button ONLY (No Startanimation button) */}
+      <div className="absolute top-5 right-6 z-20 flex items-center gap-2">
         <button
           onClick={() => {
             sounds.playClick();
             setIsDirectLoginOpen(true);
           }}
-          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium bg-white/10 hover:bg-white/20 border border-white/15 text-zinc-200 backdrop-blur-xl shadow-lg transition-all"
+          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium backdrop-blur-xl shadow-lg transition-all ${
+            isLightTheme
+              ? 'bg-black/5 hover:bg-black/10 border border-black/10 text-zinc-800'
+              : 'bg-white/10 hover:bg-white/20 border border-white/15 text-zinc-200'
+          }`}
         >
           <LogIn className="w-3.5 h-3.5 text-purple-400" />
           <span>Bestehenden Account anmelden</span>
@@ -446,12 +510,13 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
           - NO heavy borders: 'border-0' or barely-visible ultra-fine hair glass reflection 'border border-white/10'
           - VERY ROUND: 'rounded-[38px] sm:rounded-[44px]'
           - NON-SCROLLABLE: 'overflow-hidden' with fixed compact height
+          - DYNAMIC THEME: Transitions smoothly between Hell, Dunkel, and Glassy
       */}
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 12 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-        className="relative w-full max-w-[840px] h-[590px] rounded-[38px] sm:rounded-[44px] bg-[#141520]/75 border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.85)] flex flex-col overflow-hidden backdrop-blur-3xl text-zinc-100"
+        className={`relative w-full max-w-[840px] h-[590px] rounded-[38px] sm:rounded-[44px] flex flex-col overflow-hidden transition-all duration-500 ${cardContainerClass}`}
       >
         {/* Top Header (Clean minimalist header without top progress bar) */}
         <div className="px-7 pt-5 pb-1 flex items-center justify-between shrink-0">
@@ -462,7 +527,7 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
             >
               <Sparkles className="w-3 h-3" />
             </div>
-            <span className="text-xs font-bold text-zinc-300 tracking-wide uppercase">
+            <span className={`text-xs font-bold tracking-wide uppercase ${isLightTheme ? 'text-zinc-700' : 'text-zinc-300'}`}>
               ObsidianOS Assistent
             </span>
           </div>
@@ -472,10 +537,10 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
         <div className="flex-1 px-8 py-2 flex flex-col justify-between overflow-hidden">
           {/* Header Title & Subtitle */}
           <div className="text-center space-y-1 mb-2 shrink-0">
-            <h2 className="text-xl font-bold text-white tracking-tight">
+            <h2 className={`text-xl font-bold tracking-tight ${isLightTheme ? 'text-zinc-900' : 'text-white'}`}>
               {stepTitles[currentStep].title}
             </h2>
-            <p className="text-xs text-zinc-400">
+            <p className={`text-xs ${isLightTheme ? 'text-zinc-600' : 'text-zinc-400'}`}>
               {stepTitles[currentStep].subtitle}
             </p>
           </div>
@@ -543,30 +608,6 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                       </div>
                     </div>
                   </div>
-
-                  {/* Diktatfunktion Toggle */}
-                  <div className="p-2.5 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Mic className="w-3.5 h-3.5 text-purple-400" />
-                      <div>
-                        <span className="text-xs font-semibold text-purple-200 block">Diktierfunktion</span>
-                        <span className="text-[10px] text-purple-300/70">Sprachbefehle für {selectedCountry.name}</span>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setDictationEnabled(!dictationEnabled)}
-                      className={`w-9 h-5 rounded-full p-0.5 transition-colors ${
-                        dictationEnabled ? 'bg-purple-600' : 'bg-zinc-700'
-                      }`}
-                    >
-                      <div
-                        className={`w-4 h-4 rounded-full bg-white transition-transform ${
-                          dictationEnabled ? 'translate-x-4' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
                 </div>
               </div>
             </div>
@@ -616,12 +657,12 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                   <span className="text-[10px] text-zinc-500 mt-2 block">Sofort anpassbar</span>
                 </div>
 
-                {/* Motorik */}
+                {/* Motorik & Sprache */}
                 <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/10 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-2.5">
                       <Sliders className="w-4 h-4 text-blue-400" />
-                      <span className="text-xs font-bold text-white">Motorik</span>
+                      <span className="text-xs font-bold text-white">Motorik & Sprache</span>
                     </div>
                     <div className="space-y-2">
                       <label className="flex items-center justify-between text-xs text-zinc-300 cursor-pointer">
@@ -633,12 +674,24 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                           className="rounded border-zinc-700 text-purple-600 focus:ring-purple-500"
                         />
                       </label>
+                      <label className="flex items-center justify-between text-xs text-zinc-300 cursor-pointer">
+                        <span className="flex items-center gap-1.5">
+                          <Mic className="w-3.5 h-3.5 text-purple-400" />
+                          <span>Diktierfunktion</span>
+                        </span>
+                        <input
+                          type="checkbox"
+                          checked={dictationEnabled}
+                          onChange={(e) => setDictationEnabled(e.target.checked)}
+                          className="rounded border-zinc-700 text-purple-600 focus:ring-purple-500"
+                        />
+                      </label>
                       <div className="p-2 rounded-xl bg-black/30 border border-white/5 text-[11px] text-zinc-400 leading-snug">
-                        Ermöglicht Navigation mittels einzelner Tastendrücke oder Verweildauer.
+                        Diktieren von Texten & Sprachsteuerung ohne Tastatur.
                       </div>
                     </div>
                   </div>
-                  <span className="text-[10px] text-zinc-500 mt-2 block">Optimierte Klick-Bereiche</span>
+                  <span className="text-[10px] text-zinc-500 mt-2 block">Optimierte Eingabehilfen</span>
                 </div>
 
                 {/* Gehör */}
@@ -1053,7 +1106,7 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                       type="text"
                       value={fullName}
                       onChange={(e) => handleFullNameChange(e.target.value)}
-                      placeholder="z. B. Lia Clu"
+                      placeholder="z. B. Alex Thorne"
                       className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500"
                     />
                   </div>
@@ -1067,7 +1120,7 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                         type="text"
                         value={accountName}
                         onChange={(e) => setAccountName(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
-                        placeholder="z. B. liaclu"
+                        placeholder="z. B. alex"
                         className="w-full px-3 py-1.5 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 font-mono"
                       />
                     </div>
@@ -1361,7 +1414,7 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
             <div className="flex-1 flex flex-col justify-center gap-3 overflow-hidden">
               {/* Theme Mode Selector (Hell, Dunkel, glassy oder Automatisch) */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+                <label className={`text-[11px] font-semibold uppercase tracking-wider block ${isLightTheme ? 'text-zinc-600' : 'text-zinc-400'}`}>
                   Erscheinungsbild wählen
                 </label>
                 <div className="grid grid-cols-4 gap-2.5">
@@ -1378,19 +1431,27 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                         type="button"
                         onClick={() => {
                           sounds.playClick();
-                          setThemeMode(t.id as any);
+                          const nextMode = t.id as any;
+                          setThemeMode(nextMode);
+                          if (nextMode === 'light') {
+                            setSelectedWallpaper('obsidian-light');
+                          } else {
+                            setSelectedWallpaper('obsidian-dark');
+                          }
                         }}
                         className={`p-2.5 rounded-2xl border text-left transition-all ${
                           isSelected
                             ? 'bg-purple-600/30 border-purple-500 text-white shadow-md font-semibold'
+                            : isLightTheme
+                            ? 'bg-black/[0.04] border-black/10 text-zinc-700 hover:text-zinc-950 hover:bg-black/[0.07]'
                             : 'bg-white/[0.03] border-white/10 text-zinc-400 hover:text-zinc-200'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs text-white font-bold">{t.name}</span>
+                          <span className={`text-xs font-bold ${isLightTheme ? (isSelected ? 'text-white' : 'text-zinc-900') : 'text-white'}`}>{t.name}</span>
                           {isSelected && <Check className="w-3 h-3 text-purple-400" />}
                         </div>
-                        <span className="text-[10px] text-zinc-400 block leading-tight">{t.desc}</span>
+                        <span className={`text-[10px] block leading-tight ${isLightTheme ? (isSelected ? 'text-purple-100' : 'text-zinc-500') : 'text-zinc-400'}`}>{t.desc}</span>
                       </button>
                     );
                   })}
@@ -1399,7 +1460,7 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
 
               {/* Accent Color Palette */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
+                <label className={`text-[11px] font-semibold uppercase tracking-wider block ${isLightTheme ? 'text-zinc-600' : 'text-zinc-400'}`}>
                   System-Akzentfarbe
                 </label>
                 <div className="flex items-center gap-2.5">
@@ -1421,7 +1482,11 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                         }}
                         className={`px-3 py-1.5 rounded-xl border text-xs flex items-center gap-2 transition-all ${
                           isSelected
-                            ? 'bg-white/15 border-white/40 text-white font-semibold'
+                            ? isLightTheme
+                              ? 'bg-black/10 border-black/30 text-zinc-950 font-semibold'
+                              : 'bg-white/15 border-white/40 text-white font-semibold'
+                            : isLightTheme
+                            ? 'bg-black/[0.03] border-black/10 text-zinc-600 hover:text-zinc-900'
                             : 'bg-black/30 border-white/10 text-zinc-400 hover:text-white'
                         }`}
                       >
@@ -1433,48 +1498,109 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
                 </div>
               </div>
 
-              {/* Final Ready Box */}
-              <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/10 flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold text-white">Alles bereit für den Start!</h4>
-                  <p className="text-[11px] text-zinc-400">
-                    Dein personalisiertes ObsidianOS Betriebssystem wird nun initialisiert.
-                  </p>
+              {/* Wallpaper Selection (including uploaded pictures) */}
+              <div className="space-y-1.5">
+                <label className={`text-[11px] font-semibold uppercase tracking-wider block ${isLightTheme ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                  Hintergrundbild
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    {
+                      id: 'obsidian-dark',
+                      name: 'Obsidian Dunkel',
+                      thumb: OBSIDIAN_DEFAULT_WALLPAPERS.dark,
+                    },
+                    {
+                      id: 'obsidian-light',
+                      name: 'Obsidian Hell',
+                      thumb: OBSIDIAN_DEFAULT_WALLPAPERS.light,
+                    },
+                    {
+                      id: 'photo-user-colorful',
+                      name: 'Korn & Farben (Upload)',
+                      thumb: OBSIDIAN_DEFAULT_WALLPAPERS.userColorful,
+                    },
+                    {
+                      id: 'photo-user-dark-purple',
+                      name: 'Dunkles Violett (Upload)',
+                      thumb: OBSIDIAN_DEFAULT_WALLPAPERS.userDarkPurple,
+                    },
+                  ].map((wp) => {
+                    const isSelected = selectedWallpaper === wp.id;
+                    return (
+                      <button
+                        key={wp.id}
+                        type="button"
+                        onClick={() => {
+                          sounds.playClick();
+                          setSelectedWallpaper(wp.id as any);
+                        }}
+                        className={`group relative h-16 rounded-xl overflow-hidden border text-left transition-all ${
+                          isSelected
+                            ? 'ring-2 ring-purple-500 border-white'
+                            : 'border-white/10 hover:border-white/30'
+                        }`}
+                      >
+                        <img
+                          src={wp.thumb}
+                          alt={wp.name}
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-1.5">
+                          <span className="text-[10px] font-semibold text-white truncate drop-shadow">
+                            {wp.name}
+                          </span>
+                        </div>
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 p-0.5 rounded-full bg-purple-600 text-white">
+                            <Check className="w-2.5 h-2.5" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
-                <button
-                  type="button"
-                  disabled={isFinalizing}
-                  onClick={handleLaunchOS}
-                  className="px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-xl transition-all hover:scale-[1.03] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
-                  style={{
-                    backgroundColor: ACCENT_COLORS[selectedAccent]?.primary || '#9333ea',
-                    boxShadow: `0 8px 25px ${ACCENT_COLORS[selectedAccent]?.glow || 'rgba(147,51,234,0.6)'}`,
-                  }}
-                >
-                  {isFinalizing ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                      <span>Richte Desktop ein...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-4 h-4" />
-                      <span>ObsidianOS starten</span>
-                    </>
-                  )}
-                </button>
+              </div>
+
+              {/* Ready Summary Card */}
+              <div className={`p-3 rounded-2xl border flex items-center justify-between transition-colors ${
+                isLightTheme
+                  ? 'bg-black/[0.03] border-black/10'
+                  : 'bg-white/[0.02] border-white/10'
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className={`text-xs font-bold ${isLightTheme ? 'text-zinc-900' : 'text-white'}`}>Alles bereit für den Start!</h4>
+                    <p className={`text-[11px] ${isLightTheme ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                      Klicke unten rechts auf „ObsidianOS starten“, um deinen konfigurierten Desktop zu laden.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           )}
         </div>
 
         {/* Bottom Navigation Controls Bar */}
-        <div className="px-8 py-4 border-t border-white/10 bg-black/20 flex items-center justify-between shrink-0">
+        <div className={`px-8 py-4 border-t flex items-center justify-between shrink-0 transition-colors ${
+          isLightTheme
+            ? 'border-black/10 bg-black/[0.03]'
+            : isGlassyTheme
+            ? 'border-white/15 bg-white/5'
+            : 'border-white/10 bg-black/20'
+        }`}>
           <button
             type="button"
             disabled={currentStep === 1}
             onClick={handleBack}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-zinc-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none transition-all"
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-30 disabled:pointer-events-none transition-all ${
+              isLightTheme
+                ? 'text-zinc-700 hover:text-zinc-950 hover:bg-black/10'
+                : 'text-zinc-300 hover:text-white hover:bg-white/10'
+            }`}
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Zurück</span>
@@ -1507,7 +1633,28 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           ) : (
-            <div className="w-24" />
+            <button
+              type="button"
+              disabled={isFinalizing}
+              onClick={handleLaunchOS}
+              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-xl transition-all hover:scale-[1.03] active:scale-[0.98] disabled:opacity-50"
+              style={{
+                backgroundColor: ACCENT_COLORS[selectedAccent]?.primary || '#9333ea',
+                boxShadow: `0 8px 25px ${ACCENT_COLORS[selectedAccent]?.glow || 'rgba(147,51,234,0.6)'}`,
+              }}
+            >
+              {isFinalizing ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <span>Richte Desktop ein...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>ObsidianOS starten</span>
+                </>
+              )}
+            </button>
           )}
         </div>
       </motion.div>

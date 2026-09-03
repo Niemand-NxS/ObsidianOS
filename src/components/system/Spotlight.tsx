@@ -10,6 +10,8 @@ import {
   Globe,
   Terminal,
   Lock,
+  LogOut,
+  Trash2,
   RefreshCw,
   Sliders,
   Palette,
@@ -34,6 +36,7 @@ export const Spotlight: React.FC = () => {
     openApp,
     files,
     lockScreen,
+    logout,
     triggerSync,
     updateSettings,
     accentConfig,
@@ -212,6 +215,28 @@ export const Spotlight: React.FC = () => {
           closeSpotlight();
         },
       },
+      {
+        id: 'act-logout',
+        title: 'Abmelden',
+        subtitle: 'Aktuelle Sitzung beenden und alle Fenster schließen',
+        category: 'Aktion',
+        icon: 'LogOut',
+        action: () => {
+          logout();
+          closeSpotlight();
+        },
+      },
+      {
+        id: 'act-delete-account',
+        title: 'Account verwalten & löschen',
+        subtitle: 'Benutzerkonto und Sicherheitseinstellungen öffnen',
+        category: 'Aktion',
+        icon: 'Trash2',
+        action: () => {
+          openApp('settings');
+          closeSpotlight();
+        },
+      },
     ];
 
     actions.forEach((act) => {
@@ -221,7 +246,7 @@ export const Spotlight: React.FC = () => {
     });
 
     return items;
-  }, [query, mathResult, files, openApp, closeSpotlight, lockScreen, triggerSync]);
+  }, [query, mathResult, files, openApp, closeSpotlight, lockScreen, logout, triggerSync]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
@@ -265,6 +290,10 @@ export const Spotlight: React.FC = () => {
         return <Shield className="w-4 h-4 text-purple-400" />;
       case 'Lock':
         return <Lock className="w-4 h-4 text-amber-400" />;
+      case 'LogOut':
+        return <LogOut className="w-4 h-4 text-red-400" />;
+      case 'Trash2':
+        return <Trash2 className="w-4 h-4 text-red-400" />;
       case 'RefreshCw':
         return <RefreshCw className="w-4 h-4 text-emerald-400" />;
       case 'Gamepad2':
