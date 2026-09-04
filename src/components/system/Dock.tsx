@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useOS } from '../../context/OSContext';
 import { APPS_REGISTRY } from '../../config/themeConfig';
 import { AppId } from '../../types';
+import { AppIcon } from '../common/AppIcon';
 import {
   Settings,
   Folder,
@@ -99,8 +100,8 @@ export const Dock: React.FC = () => {
   const iconGlassBlur = settings.iconGlassBlur ?? 20;
   const iconRadiusClass = settings.iconRadius || 'rounded-xl';
 
-  const getIconForApp = (iconName: string) => {
-    const Component = ICON_COMPONENTS[iconName] || Settings;
+  const getIconForApp = (iconName: string, appId?: string) => {
+    const effectiveName = (appId && settings.customAppIcons?.[appId]) || iconName;
     const iconColor =
       resolvedIconStyle === 'light'
         ? accentConfig.primary
@@ -109,7 +110,7 @@ export const Dock: React.FC = () => {
         : effectiveGlassContrast === 'dark'
         ? '#09090b'
         : '#ffffff';
-    return <Component className="w-5 h-5 transition-colors" style={{ color: iconColor }} />;
+    return <AppIcon name={effectiveName} className="w-5 h-5 transition-colors" style={{ color: iconColor }} />;
   };
 
   const getWindowForApp = (appId: AppId) => {
@@ -332,7 +333,7 @@ export const Dock: React.FC = () => {
                       : app.name
                   }
                 >
-                  {getIconForApp(app.iconName)}
+                  {getIconForApp(app.iconName, app.id)}
                 </motion.button>
 
                 {/* Running & Minimized Indicator */}

@@ -13,6 +13,7 @@ import { DesktopGlance } from './components/system/DesktopGlance';
 import { AppQuickSettings } from './components/system/AppQuickSettings';
 import { APPS_REGISTRY } from './config/themeConfig';
 import { AppMetadata } from './types';
+import { AppIcon } from './components/common/AppIcon';
 import {
   Settings,
   Folder,
@@ -273,6 +274,35 @@ const DesktopContent: React.FC = () => {
       : null;
 
   // Pointer movement listener for drag
+  const swipeDownStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+
+  const handleDesktopTouchStart = (e: React.TouchEvent) => {
+    // Single finger touch on empty desktop space
+    if (e.touches.length === 1) {
+      swipeDownStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+        time: Date.now(),
+      };
+    }
+  };
+
+  const handleDesktopTouchEnd = (e: React.TouchEvent) => {
+    if (!swipeDownStartRef.current || e.changedTouches.length === 0) return;
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const deltaX = endX - swipeDownStartRef.current.x;
+    const deltaY = endY - swipeDownStartRef.current.y;
+    const elapsed = Date.now() - swipeDownStartRef.current.time;
+    swipeDownStartRef.current = null;
+
+    // Downward swipe: at least 45px downward, mostly vertical, under 700ms
+    if (deltaY > 45 && deltaY > Math.abs(deltaX) * 1.2 && elapsed < 700) {
+      openSpotlight();
+      sounds.playOpen();
+    }
+  };
+
   useEffect(() => {
     const handlePointerMove = (e: PointerEvent) => {
       if (!dragStartRef.current) return;
@@ -346,10 +376,10 @@ const DesktopContent: React.FC = () => {
       {isSetupCompleted && (
         <motion.div
           key="desktop-workspace-container"
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="contents"
+          initial={{ opacity: 0, scale: 0.97, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+          transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+          className="absolute inset-0 overflow-hidden pointer-events-auto"
         >
           {/* 2. Top System Bar with unlock slide-down entrance */}
           <motion.div
@@ -368,6 +398,8 @@ const DesktopContent: React.FC = () => {
           <main
             id="desktop-main-workspace"
             className="absolute inset-0 pt-8 pb-24 overflow-hidden z-10"
+            onTouchStart={handleDesktopTouchStart}
+            onTouchEnd={handleDesktopTouchEnd}
             onClick={() => setSelectedQuickApp(null)}
             onDragOver={(e) => {
               e.preventDefault();
@@ -415,8 +447,7 @@ const DesktopContent: React.FC = () => {
 
         {/* Render Raster-Snapped Desktop Icons with Lockscreen Frosted Glass & Stagger */}
         {visibleDesktopApps.map((app, index) => {
-          const IconComp =
-            DESKTOP_ICONS[app.iconName] || DESKTOP_ICONS[app.iconName] || Sparkles;
+          const appIconName = settings.customAppIcons?.[app.id] || app.iconName;
 
           // Default grid slot
           const defaultCol = Math.floor(index / 5);
@@ -534,7 +565,8 @@ const DesktopContent: React.FC = () => {
                     : '0 8px 24px rgba(0,0,0,0.4)',
                 }}
               >
-                <IconComp
+                <AppIcon
+                  name={appIconName}
                   className={`${iconSvgClass} transition-colors drop-shadow ${
                     resolvedIconStyle === 'light'
                       ? 'text-zinc-800 group-hover:text-black'
@@ -683,7 +715,7 @@ const DesktopContent: React.FC = () => {
 
       {/* Standalone / Replayable Crystal macOS-like Startup Animation */}
       <AnimatePresence>
-        {isStartupAnimationActive && (
+        {isStartupAnimationActive && isSetupCompleted && (
           <CrystalWelcomeScreen
             key="crystal-boot-screen"
             onStart={closeStartupAnimation}

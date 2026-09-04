@@ -493,23 +493,35 @@ export const FirebaseService = {
     }
   },
 
-  // Get Top Game Highscores
+  // Get Top Game Highscores (in-memory sort avoids Firestore composite index requirement)
   async getGameLeaderboard(gameId: string, maxResults = 10) {
     const colPath = 'obsidian_game_scores';
     try {
       await this.ensureAuth();
       const q = query(
         collection(db, colPath),
-        where('gameId', '==', gameId),
-        orderBy('score', 'desc'),
-        limit(maxResults)
+        where('gameId', '==', gameId)
       );
       const snap = await getDocs(q);
-      const scores = snap.docs.map((d) => d.data());
+      const scores = snap.docs
+        .map((d) => d.data())
+        .sort((a: any, b: any) => (Number(b.score) || 0) - (Number(a.score) || 0))
+        .slice(0, maxResults);
       return { success: true, scores };
     } catch (err: any) {
-      handleFirestoreError(err, OperationType.LIST, colPath);
-      return { success: false, scores: [] };
+      // Fallback: fetch without where clause in case of index issues
+      try {
+        const snap = await getDocs(collection(db, colPath));
+        const scores = snap.docs
+          .map((d) => d.data())
+          .filter((d: any) => d.gameId === gameId)
+          .sort((a: any, b: any) => (Number(b.score) || 0) - (Number(a.score) || 0))
+          .slice(0, maxResults);
+        return { success: true, scores };
+      } catch (fallbackErr) {
+        handleFirestoreError(err, OperationType.LIST, colPath);
+        return { success: false, scores: [] };
+      }
     }
   },
 

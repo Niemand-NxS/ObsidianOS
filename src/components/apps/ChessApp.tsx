@@ -24,6 +24,7 @@ import {
   Award,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { ChessPieceSvg } from './ChessPieceSvg';
 
 export type PieceType = 'p' | 'n' | 'b' | 'r' | 'q' | 'k';
 export type PieceColor = 'w' | 'b';
@@ -891,35 +892,14 @@ export const ChessApp: React.FC = () => {
     setIsStalemate(false);
   };
 
-  // Render Chess Piece SVG Icon
+  // Render Chess Piece SVG Icon with perfect contrast on all platforms
   const renderPiece = (piece: Piece) => {
-    const isW = piece.color === 'w';
-    const fill = isW ? '#ffffff' : '#1e1e2d';
-    const stroke = isW ? '#181824' : '#e4e4e7';
-
-    // Standard Unicode glyphs styled with glowing shadows
-    const symbols: Record<PieceType, string> = {
-      k: isW ? '♔' : '♚',
-      q: isW ? '♕' : '♛',
-      r: isW ? '♖' : '♜',
-      b: isW ? '♗' : '♝',
-      n: isW ? '♘' : '♞',
-      p: isW ? '♙' : '♟',
-    };
-
     return (
-      <span
-        className={`text-2xl sm:text-4xl select-none transition-transform duration-150 drop-shadow-md ${
-          isW ? 'text-zinc-100' : 'text-zinc-900 stroke-white'
-        }`}
-        style={{
-          filter: isW
-            ? 'drop-shadow(0 2px 4px rgba(255,255,255,0.4))'
-            : 'drop-shadow(0 2px 4px rgba(0,0,0,0.8))',
-        }}
-      >
-        {symbols[piece.type]}
-      </span>
+      <ChessPieceSvg
+        type={piece.type}
+        color={piece.color}
+        className="w-8 h-8 sm:w-11 sm:h-11 transform active:scale-95 transition-transform"
+      />
     );
   };
 
@@ -945,10 +925,10 @@ export const ChessApp: React.FC = () => {
       <div className="h-12 border-b border-[#27272a]/60 px-4 flex items-center justify-between bg-[#111118] select-none gap-3 shrink-0">
         <div className="flex items-center gap-2">
           <div
-            className="w-7 h-7 rounded-xl flex items-center justify-center text-white font-bold shadow-md"
+            className="w-7 h-7 rounded-xl flex items-center justify-center p-1 text-white font-bold shadow-md"
             style={{ backgroundColor: accentConfig.primary }}
           >
-            ♔
+            <ChessPieceSvg type="k" color="w" className="w-5 h-5" />
           </div>
           <span className="text-xs font-bold text-white tracking-wide uppercase">Obsidian Schach</span>
         </div>
@@ -1021,8 +1001,8 @@ export const ChessApp: React.FC = () => {
           {/* Top Player Profile Bar */}
           <div className="w-full max-w-[420px] flex items-center justify-between py-1.5 px-3 mb-2 rounded-xl bg-[#12121c] border border-white/5 text-xs">
             <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-md flex items-center justify-center bg-zinc-800 text-white font-bold text-xs">
-                {isFlipped ? '♔' : '♚'}
+              <div className="w-6 h-6 rounded-md flex items-center justify-center p-0.5 bg-zinc-800 border border-zinc-700">
+                <ChessPieceSvg type="k" color={isFlipped ? 'w' : 'b'} className="w-4 h-4" />
               </div>
               <span className="font-semibold text-zinc-300">
                 {gameMode === 'ai' ? (isFlipped ? 'Spieler (Weiß)' : 'Obsidian KI (Schwarz)') : isFlipped ? 'Spieler 1' : 'Spieler 2'}
@@ -1033,10 +1013,10 @@ export const ChessApp: React.FC = () => {
             </div>
 
             {/* Captured Pieces by Opponent */}
-            <div className="flex items-center gap-0.5 text-sm overflow-x-auto max-w-[150px]">
+            <div className="flex items-center gap-0.5 overflow-x-auto max-w-[150px]">
               {(isFlipped ? capturedWhite : capturedBlack).map((p, i) => (
-                <span key={i} className="opacity-80">
-                  {p.type === 'p' ? '♟' : p.type === 'n' ? '♞' : p.type === 'b' ? '♝' : p.type === 'r' ? '♜' : '♛'}
+                <span key={i} className="inline-block">
+                  <ChessPieceSvg type={p.type} color={p.color} className="w-3.5 h-3.5" />
                 </span>
               ))}
             </div>
@@ -1101,8 +1081,8 @@ export const ChessApp: React.FC = () => {
           {/* Bottom Player Profile Bar */}
           <div className="w-full max-w-[420px] flex items-center justify-between py-1.5 px-3 mt-2 rounded-xl bg-[#12121c] border border-white/5 text-xs">
             <div className="flex items-center gap-2">
-              <div className="w-5 h-5 rounded-md flex items-center justify-center bg-white text-zinc-900 font-bold text-xs">
-                {isFlipped ? '♚' : '♔'}
+              <div className="w-6 h-6 rounded-md flex items-center justify-center p-0.5 bg-white border border-zinc-200 shadow-sm">
+                <ChessPieceSvg type="k" color={isFlipped ? 'b' : 'w'} className="w-4 h-4" />
               </div>
               <span className="font-semibold text-zinc-300">
                 {gameMode === 'ai' ? (isFlipped ? 'Obsidian KI (Schwarz)' : 'Du (Weiß)') : isFlipped ? 'Spieler 2' : 'Spieler 1'}
@@ -1115,10 +1095,10 @@ export const ChessApp: React.FC = () => {
             </div>
 
             {/* Captured Pieces by Player */}
-            <div className="flex items-center gap-0.5 text-sm overflow-x-auto max-w-[150px]">
+            <div className="flex items-center gap-0.5 overflow-x-auto max-w-[150px]">
               {(isFlipped ? capturedBlack : capturedWhite).map((p, i) => (
-                <span key={i} className="opacity-80">
-                  {p.type === 'p' ? '♙' : p.type === 'n' ? '♘' : p.type === 'b' ? '♗' : p.type === 'r' ? '♖' : '♕'}
+                <span key={i} className="inline-block">
+                  <ChessPieceSvg type={p.type} color={p.color} className="w-3.5 h-3.5" />
                 </span>
               ))}
             </div>
@@ -1237,9 +1217,9 @@ export const ChessApp: React.FC = () => {
                       makeMove(promotionPending.from, promotionPending.to, pType);
                       setPromotionPending(null);
                     }}
-                    className="p-3 rounded-xl bg-white/5 hover:bg-purple-600/30 border border-white/10 hover:border-purple-400 text-2xl transition-all"
+                    className="p-2.5 rounded-xl bg-white/5 hover:bg-purple-600/30 border border-white/10 hover:border-purple-400 flex items-center justify-center transition-all"
                   >
-                    {pType === 'q' ? '♕' : pType === 'r' ? '♖' : pType === 'b' ? '♗' : '♘'}
+                    <ChessPieceSvg type={pType} color={promotionPending.piece.color} className="w-8 h-8" />
                   </button>
                 ))}
               </div>

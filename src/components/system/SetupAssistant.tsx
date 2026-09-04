@@ -35,6 +35,7 @@ import {
   Share2,
   Upload,
   FileArchive,
+  Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { sounds } from '../../services/soundService';
@@ -54,13 +55,54 @@ type SetupStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 interface CountryConfig {
   id: string;
   name: string;
+  localName?: string;
   flag: string;
-  lang: 'de' | 'en' | 'fr';
+  lang: string;
   kb: 'de' | 'us' | 'ch';
   currency: string;
   units: 'metric' | 'imperial';
   dateFormat: string;
 }
+
+const DEFAULT_SETUP_STRINGS: Record<string, string> = {
+  assistantTitle: "ObsidianOS Assistent",
+  step1Title: "Land, Region & Tastatur",
+  step1Subtitle: "System-Lokalisierung und Eingabemethoden",
+  step2Title: "Barrierefreiheit",
+  step2Subtitle: "Eingabe- und Sehhilfen konfigurieren",
+  step3Title: "Netzwerkverbindung",
+  step3Subtitle: "Internet & Cloud-Infrastruktur verbinden",
+  step4Title: "Datenübertragung",
+  step4Subtitle: "Migrationsassistent für Backups & Accounts",
+  step5Title: "Konto & Authentifizierung",
+  step5Subtitle: "Computer-Account und Lizenzbedingungen",
+  step6Title: "Sicherheit & Verschlüsselung",
+  step6Subtitle: "Optic ID Augenscan für biometrischen Login",
+  step7Title: "Ortung, Diagnose & Dienste",
+  step7Subtitle: "Hintergrunddienste & Datenschutz",
+  step8Title: "Personalisierung & Finale",
+  step8Subtitle: "UI-Erscheinungsbild und Systemstart",
+  btnContinue: "Fortfahren",
+  btnBack: "Zurück",
+  btnSkip: "Überspringen",
+  btnStartOS: "ObsidianOS starten",
+  btnExistingAccount: "Bestehenden Account anmelden",
+  chooseCountry: "Heimatland wählen",
+  searchCountry: "Land suchen...",
+  regionalSettings: "Automatische Regionaleinstellungen",
+  currency: "Währung",
+  units: "Maßeinheiten",
+  dateFormat: "Datumsformat",
+  keyboardLayout: "Tastaturlayout",
+  fullName: "Vollständiger Name",
+  accountName: "Benutzername (Ordner ~/Users/)",
+  password: "Passwort",
+  confirmPassword: "Passwort bestätigen",
+  passwordHint: "Passwort-Hinweis (Optional)",
+  readyTitle: "Alles bereit für den Start!",
+  readySubtitle: "Klicke unten rechts auf „ObsidianOS starten“, um deinen Desktop zu laden.",
+  settingUpDesktop: "Richte Desktop ein...",
+};
 
 const COUNTRIES: CountryConfig[] = [
   { id: 'de', name: 'Deutschland', flag: '🇩🇪', lang: 'de', kb: 'de', currency: 'EUR (€)', units: 'metric', dateFormat: 'TT.MM.JJJJ' },
@@ -93,20 +135,82 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
   const [isDirectLoggingIn, setIsDirectLoggingIn] = useState(false);
 
   // -------------------------------------------------------------
-  // STEP 1: Land, Region & Tastatur
+  // STEP 1: Land, Region & Tastatur (mit API Anbindung)
   // -------------------------------------------------------------
+  const [availableCountries, setAvailableCountries] = useState<CountryConfig[]>(COUNTRIES);
+  const [countrySearchQuery, setCountrySearchQuery] = useState('');
   const [selectedCountry, setSelectedCountry] = useState<CountryConfig>(COUNTRIES[0]);
-  const [primaryLang, setPrimaryLang] = useState<'de' | 'en' | 'fr'>('de');
+  const [primaryLang, setPrimaryLang] = useState<string>('de');
   const [keyboardLayout, setKeyboardLayout] = useState<'de' | 'us' | 'ch'>('de');
   const [dictationEnabled, setDictationEnabled] = useState(true);
 
-  // Update language/keyboard on country change
-  const handleSelectCountry = (country: CountryConfig) => {
+  // Dynamic API Translations State
+  const [translatedTexts, setTranslatedTexts] = useState<Record<string, string>>(DEFAULT_SETUP_STRINGS);
+  const [isTranslating, setIsTranslating] = useState<boolean>(false);
+
+  const t = (key: keyof typeof DEFAULT_SETUP_STRINGS, fallback?: string): string => {
+    return translatedTexts[key] || fallback || DEFAULT_SETUP_STRINGS[key] || key;
+  };
+
+  // Fetch Countries from API on mount
+  useEffect(() => {
+    fetch('/api/setup/countries')
+      .then((res) => {
+        if (!res.ok) throw new Error('API offline');
+        return res.json();
+      })
+      .then((data) => {
+        if (data && data.countries && Array.isArray(data.countries) && data.countries.length > 0) {
+          setAvailableCountries(data.countries);
+        }
+      })
+      .catch((err) => console.warn('Countries API fetch warning, fallback active:', err));
+  }, []);
+
+  // Update language/keyboard on country change and translate all setup assistant texts via API
+  const handleSelectCountry = async (country: CountryConfig) => {
     sounds.playClick();
     setSelectedCountry(country);
     setPrimaryLang(country.lang);
-    setKeyboardLayout(country.kb);
+    setKeyboardLayout(country.kb as any);
+
+    if (country.lang === 'de') {
+      setTranslatedTexts(DEFAULT_SETUP_STRINGS);
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      const res = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          texts: DEFAULT_SETUP_STRINGS,
+          targetLang: country.lang,
+          sourceLang: 'de',
+        }),
+      });
+      const data = await res.json();
+      if (data && data.translations) {
+        setTranslatedTexts((prev) => ({ ...prev, ...data.translations }));
+      }
+    } catch (e) {
+      console.warn('Translate API call warning:', e);
+    } finally {
+      setIsTranslating(false);
+    }
   };
+
+  const filteredCountries = useMemo(() => {
+    const q = countrySearchQuery.trim().toLowerCase();
+    if (!q) return availableCountries;
+    return availableCountries.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.localName && c.localName.toLowerCase().includes(q)) ||
+        c.id.toLowerCase().includes(q)
+    );
+  }, [availableCountries, countrySearchQuery]);
 
   // -------------------------------------------------------------
   // STEP 2: Barrierefreiheit (Eingabe- und Sehhilfen)
@@ -410,14 +514,14 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
   };
 
   const stepTitles: Record<SetupStep, { title: string; subtitle: string }> = {
-    1: { title: 'Land, Region & Tastatur', subtitle: 'System-Lokalisierung und Eingabemethoden' },
-    2: { title: 'Barrierefreiheit', subtitle: 'Eingabe- und Sehhilfen konfigurieren' },
-    3: { title: 'Netzwerkverbindung', subtitle: 'Internet & Cloud-Infrastruktur verbinden' },
-    4: { title: 'Datenübertragung', subtitle: 'Migrationsassistent für Backups & Accounts' },
-    5: { title: 'Konto & Authentifizierung', subtitle: 'Computer-Account und Lizenzbedingungen' },
-    6: { title: 'Sicherheit & Verschlüsselung', subtitle: 'Optic ID Augenscan für biometrischen Login' },
-    7: { title: 'Ortung, Diagnose & Dienste', subtitle: 'Hintergrunddienste & Datenschutz' },
-    8: { title: 'Personalisierung & Finale', subtitle: 'UI-Erscheinungsbild und Systemstart' },
+    1: { title: t('step1Title', 'Land, Region & Tastatur'), subtitle: t('step1Subtitle', 'System-Lokalisierung und Eingabemethoden') },
+    2: { title: t('step2Title', 'Barrierefreiheit'), subtitle: t('step2Subtitle', 'Eingabe- und Sehhilfen konfigurieren') },
+    3: { title: t('step3Title', 'Netzwerkverbindung'), subtitle: t('step3Subtitle', 'Internet & Cloud-Infrastruktur verbinden') },
+    4: { title: t('step4Title', 'Datenübertragung'), subtitle: t('step4Subtitle', 'Migrationsassistent für Backups & Accounts') },
+    5: { title: t('step5Title', 'Konto & Authentifizierung'), subtitle: t('step5Subtitle', 'Computer-Account und Lizenzbedingungen') },
+    6: { title: t('step6Title', 'Sicherheit & Verschlüsselung'), subtitle: t('step6Subtitle', 'Optic ID Augenscan für biometrischen Login') },
+    7: { title: t('step7Title', 'Ortung, Diagnose & Dienste'), subtitle: t('step7Subtitle', 'Hintergrunddienste & Datenschutz') },
+    8: { title: t('step8Title', 'Personalisierung & Finale'), subtitle: t('step8Subtitle', 'UI-Erscheinungsbild und Systemstart') },
   };
 
   // Theme mode detection for dynamic transitions
@@ -441,177 +545,257 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
   const noiseSvgData =
     "data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.08'/%3E%3C/svg%3E";
 
-  // Dynamic card container classes based on selected theme
+  // Dynamic card container classes based on selected theme with enhanced light mode contrast
   const cardContainerClass = isLightTheme
-    ? 'bg-white/85 border border-black/10 shadow-[0_30px_100px_rgba(0,0,0,0.28)] text-zinc-900 backdrop-blur-2xl'
+    ? 'bg-white/95 border border-black/15 shadow-[0_30px_100px_rgba(0,0,0,0.18)] text-zinc-950 backdrop-blur-2xl'
     : isGlassyTheme
     ? 'bg-white/10 border border-white/20 shadow-[0_30px_100px_rgba(0,0,0,0.55)] text-white backdrop-blur-3xl'
     : 'bg-[#141520]/80 border border-white/10 shadow-[0_30px_100px_rgba(0,0,0,0.85)] text-zinc-100 backdrop-blur-3xl';
 
-  if (showWelcomeIntro) {
-    return (
-      <CrystalWelcomeScreen
-        onStart={() => setShowWelcomeIntro(false)}
-        accentColor={accentConfig.primary}
-      />
-    );
-  }
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 select-none overflow-hidden font-sans">
-      {/* Background: Obsidian wallpaper that adapts to Hell / Dunkel / Glassy */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <AnimatePresence mode="wait">
-          <motion.img
-            key={assistantBgUrl}
-            src={assistantBgUrl}
-            alt="Obsidian Background"
-            initial={{ opacity: 0, scale: 1.05 }}
-            animate={{ opacity: isLightTheme ? 0.85 : 0.72, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6, ease: 'easeInOut' }}
-            className="absolute inset-0 w-full h-full object-cover filter blur-[22px] scale-105"
-          />
-        </AnimatePresence>
-        {/* Soft Noise Overlay Texture */}
-        <div
-          className="absolute inset-0 mix-blend-overlay opacity-25 pointer-events-none"
-          style={{ backgroundImage: `url("${noiseSvgData}")` }}
+    <AnimatePresence mode="wait">
+      {showWelcomeIntro ? (
+        <CrystalWelcomeScreen
+          key="setup-crystal-intro"
+          onStart={() => setShowWelcomeIntro(false)}
+          accentColor={accentConfig.primary}
         />
-        {/* Vignette Depth Gradient */}
-        <div
-          className={`absolute inset-0 transition-colors duration-700 ${
-            isLightTheme
-              ? 'bg-gradient-to-b from-white/20 via-black/10 to-black/35'
-              : 'bg-gradient-to-b from-black/25 via-black/45 to-black/80'
-          }`}
-        />
-      </div>
-
-      {/* Top Floating Actions: Direct Login Button ONLY (No Startanimation button) */}
-      <div className="absolute top-5 right-6 z-20 flex items-center gap-2">
-        <button
-          onClick={() => {
-            sounds.playClick();
-            setIsDirectLoginOpen(true);
-          }}
-          className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium backdrop-blur-xl shadow-lg transition-all ${
-            isLightTheme
-              ? 'bg-black/5 hover:bg-black/10 border border-black/10 text-zinc-800'
-              : 'bg-white/10 hover:bg-white/20 border border-white/15 text-zinc-200'
-          }`}
+      ) : (
+        <motion.div
+          key="setup-assistant-main-view"
+          initial={{ opacity: 0, scale: 0.96, filter: 'blur(8px)' }}
+          animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+          exit={{ opacity: 0, scale: 1.05, filter: 'blur(12px)', transition: { duration: 0.75, ease: [0.16, 1, 0.3, 1] } }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 select-none overflow-hidden font-sans"
         >
-          <LogIn className="w-3.5 h-3.5 text-purple-400" />
-          <span>Bestehenden Account anmelden</span>
-        </button>
-      </div>
-
-      {/* Setup Card Container:
-          - NO heavy borders: 'border-0' or barely-visible ultra-fine hair glass reflection 'border border-white/10'
-          - VERY ROUND: 'rounded-[38px] sm:rounded-[44px]'
-          - NON-SCROLLABLE: 'overflow-hidden' with fixed compact height
-          - DYNAMIC THEME: Transitions smoothly between Hell, Dunkel, and Glassy
-      */}
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0, y: 12 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-        className={`relative w-full max-w-[840px] h-[590px] rounded-[38px] sm:rounded-[44px] flex flex-col overflow-hidden transition-all duration-500 ${cardContainerClass}`}
-      >
-        {/* Top Header (Clean minimalist header without top progress bar) */}
-        <div className="px-7 pt-5 pb-1 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
+          {/* Background: Obsidian wallpaper that adapts to Hell / Dunkel / Glassy */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={assistantBgUrl}
+                src={assistantBgUrl}
+                alt="Obsidian Background"
+                initial={{ opacity: 0, scale: 1.05 }}
+                animate={{ opacity: isLightTheme ? 0.85 : 0.72, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.6, ease: 'easeInOut' }}
+                className="absolute inset-0 w-full h-full object-cover filter blur-[22px] scale-105"
+              />
+            </AnimatePresence>
+            {/* Soft Noise Overlay Texture */}
             <div
-              className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[11px] shadow-sm"
-              style={{ backgroundColor: accentConfig.primary }}
+              className="absolute inset-0 mix-blend-overlay opacity-25 pointer-events-none"
+              style={{ backgroundImage: `url("${noiseSvgData}")` }}
+            />
+            {/* Vignette Depth Gradient */}
+            <div
+              className={`absolute inset-0 transition-colors duration-700 ${
+                isLightTheme
+                  ? 'bg-gradient-to-b from-white/20 via-black/10 to-black/35'
+                  : 'bg-gradient-to-b from-black/25 via-black/45 to-black/80'
+              }`}
+            />
+          </div>
+
+          {/* Top Floating Actions: Direct Login Button */}
+          <div className="absolute top-5 right-6 z-20 flex items-center gap-2">
+            <button
+              onClick={() => {
+                sounds.playClick();
+                setIsDirectLoginOpen(true);
+              }}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold backdrop-blur-xl shadow-lg transition-all ${
+                isLightTheme
+                  ? 'bg-black/5 hover:bg-black/10 border border-black/15 text-zinc-900'
+                  : 'bg-white/10 hover:bg-white/20 border border-white/15 text-zinc-200'
+              }`}
             >
-              <Sparkles className="w-3 h-3" />
-            </div>
-            <span className={`text-xs font-bold tracking-wide uppercase ${isLightTheme ? 'text-zinc-700' : 'text-zinc-300'}`}>
-              ObsidianOS Assistent
-            </span>
-          </div>
-        </div>
-
-        {/* Stage Content Area (Fixed layout, absolute NO scrollbar) */}
-        <div className="flex-1 px-8 py-2 flex flex-col justify-between overflow-hidden">
-          {/* Header Title & Subtitle */}
-          <div className="text-center space-y-1 mb-2 shrink-0">
-            <h2 className={`text-xl font-bold tracking-tight ${isLightTheme ? 'text-zinc-900' : 'text-white'}`}>
-              {stepTitles[currentStep].title}
-            </h2>
-            <p className={`text-xs ${isLightTheme ? 'text-zinc-600' : 'text-zinc-400'}`}>
-              {stepTitles[currentStep].subtitle}
-            </p>
+              <LogIn className="w-3.5 h-3.5 text-purple-500" />
+              <span>{t('btnExistingAccount', 'Bestehenden Account anmelden')}</span>
+            </button>
           </div>
 
-          {/* Step 1: Land, Region & Tastatur */}
-          {currentStep === 1 && (
-            <div className="flex-1 flex flex-col justify-center gap-3 overflow-hidden">
-              <div className="grid grid-cols-2 gap-4">
-                {/* Country List */}
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
-                    Heimatland wählen
-                  </label>
-                  <div className="space-y-1">
-                    {COUNTRIES.map((c) => {
-                      const isSelected = selectedCountry.id === c.id;
-                      return (
-                        <button
-                          key={c.id}
-                          type="button"
-                          onClick={() => handleSelectCountry(c)}
-                          className={`w-full px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-all ${
-                            isSelected
-                              ? 'bg-purple-600/30 border border-purple-500/60 text-white font-semibold shadow-sm'
-                              : 'bg-white/[0.03] border border-white/5 text-zinc-300 hover:bg-white/[0.07]'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-base">{c.flag}</span>
-                            <span>{c.name}</span>
-                          </div>
-                          {isSelected && <Check className="w-3.5 h-3.5 text-purple-400" />}
-                        </button>
-                      );
-                    })}
-                  </div>
+          {/* Setup Card Container */}
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0, y: 12 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            transition={{ type: 'spring', stiffness: 320, damping: 30 }}
+            className={`relative w-full max-w-[840px] h-[590px] rounded-[38px] sm:rounded-[44px] flex flex-col overflow-hidden transition-all duration-500 ${cardContainerClass}`}
+          >
+            {/* Top Header */}
+            <div className="px-7 pt-5 pb-1 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2">
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-white text-[11px] shadow-sm"
+                  style={{ backgroundColor: accentConfig.primary }}
+                >
+                  <Sparkles className="w-3 h-3" />
                 </div>
+                <span className={`text-xs font-bold tracking-wide uppercase ${isLightTheme ? 'text-zinc-800' : 'text-zinc-300'}`}>
+                  {t('assistantTitle', 'ObsidianOS Assistent')}
+                </span>
+              </div>
 
-                {/* Predefined regional settings & Languages */}
-                <div className="space-y-2.5 bg-white/[0.02] border border-white/10 rounded-2xl p-3.5 flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <span className="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider block">
-                      Automatische Regionaleinstellungen
-                    </span>
-                    <div className="grid grid-cols-2 gap-2 text-xs">
-                      <div className="p-2 rounded-lg bg-black/30 border border-white/5">
-                        <span className="text-[10px] text-zinc-400 block">Währung</span>
-                        <span className="font-semibold text-white">{selectedCountry.currency}</span>
-                      </div>
-                      <div className="p-2 rounded-lg bg-black/30 border border-white/5">
-                        <span className="text-[10px] text-zinc-400 block">Maßeinheiten</span>
-                        <span className="font-semibold text-white">
-                          {selectedCountry.units === 'metric' ? 'Metrisch (km, °C)' : 'Imperial (mi, °F)'}
+              {/* API Translation indicator pill */}
+              {isTranslating ? (
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30 animate-pulse">
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  <span>Übersetze Assistent...</span>
+                </div>
+              ) : selectedCountry.lang !== 'de' ? (
+                <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20">
+                  <Globe className="w-3 h-3" />
+                  <span>{selectedCountry.flag} {selectedCountry.name} ({selectedCountry.lang.toUpperCase()})</span>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Stage Content Area (Fixed layout, absolute NO scrollbar) */}
+            <div className="flex-1 px-8 py-2 flex flex-col justify-between overflow-hidden">
+              {/* Header Title & Subtitle */}
+              <div className="text-center space-y-1 mb-2 shrink-0">
+                <h2 className={`text-xl font-bold tracking-tight ${isLightTheme ? 'text-zinc-950' : 'text-white'}`}>
+                  {stepTitles[currentStep].title}
+                </h2>
+                <p className={`text-xs ${isLightTheme ? 'text-zinc-700 font-medium' : 'text-zinc-400'}`}>
+                  {stepTitles[currentStep].subtitle}
+                </p>
+              </div>
+
+              {/* Step 1: Land, Region & Tastatur */}
+              {currentStep === 1 && (
+                <div className="flex-1 flex flex-col justify-center gap-3 overflow-hidden">
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Country List with API & Search */}
+                    <div className="space-y-1.5 flex flex-col h-[280px]">
+                      <div className="flex items-center justify-between">
+                        <label className={`text-[11px] font-semibold uppercase tracking-wider block ${isLightTheme ? 'text-zinc-700' : 'text-zinc-400'}`}>
+                          {t('chooseCountry', 'Heimatland wählen')}
+                        </label>
+                        <span className={`text-[10px] font-mono ${isLightTheme ? 'text-zinc-600' : 'text-zinc-400'}`}>
+                          {filteredCountries.length} verfügbar
                         </span>
                       </div>
-                      <div className="p-2 rounded-lg bg-black/30 border border-white/5">
-                        <span className="text-[10px] text-zinc-400 block">Datumsformat</span>
-                        <span className="font-semibold text-white">{selectedCountry.dateFormat}</span>
+
+                      {/* Search Bar for countries */}
+                      <div className="relative mb-1">
+                        <Search className={`w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none ${isLightTheme ? 'text-zinc-500' : 'text-zinc-400'}`} />
+                        <input
+                          type="text"
+                          value={countrySearchQuery}
+                          onChange={(e) => setCountrySearchQuery(e.target.value)}
+                          placeholder={t('searchCountry', 'Land suchen...')}
+                          className={`w-full pl-8 pr-3 py-1.5 rounded-full text-xs transition-all ${
+                            isLightTheme
+                              ? 'bg-black/[0.04] border border-black/15 text-zinc-950 placeholder-zinc-500 focus:bg-white focus:border-purple-600'
+                              : 'bg-black/40 border border-white/10 text-white placeholder-zinc-500 focus:border-purple-500'
+                          } focus:outline-none`}
+                        />
                       </div>
-                      <div className="p-2 rounded-lg bg-black/30 border border-white/5">
-                        <span className="text-[10px] text-zinc-400 block">Tastaturlayout</span>
-                        <span className="font-semibold text-purple-300">
-                          {keyboardLayout === 'de' ? 'QWERTZ (DE)' : keyboardLayout === 'ch' ? 'QWERTZ (CH)' : 'QWERTY (US)'}
+
+                      <div className="space-y-1 overflow-y-auto flex-1 pr-1">
+                        {filteredCountries.map((c) => {
+                          const isSelected = selectedCountry.id === c.id;
+                          return (
+                            <button
+                              key={c.id}
+                              type="button"
+                              onClick={() => handleSelectCountry(c)}
+                              className={`w-full px-3.5 py-2 rounded-full text-xs flex items-center justify-between transition-all ${
+                                isSelected
+                                  ? 'bg-purple-600 text-white font-semibold shadow-md'
+                                  : isLightTheme
+                                  ? 'bg-black/[0.04] border border-black/10 text-zinc-900 hover:bg-black/[0.08]'
+                                  : 'bg-white/[0.03] border border-white/5 text-zinc-300 hover:bg-white/[0.07]'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5">
+                                <span className="text-base">{c.flag}</span>
+                                <span className="truncate">{c.name}</span>
+                              </div>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-white" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Predefined regional settings & Languages */}
+                    <div className={`space-y-2.5 border rounded-3xl p-4 flex flex-col justify-between ${
+                      isLightTheme
+                        ? 'bg-black/[0.02] border-black/10 text-zinc-900'
+                        : 'bg-white/[0.02] border-white/10 text-white'
+                    }`}>
+                      <div className="space-y-2">
+                        <span className={`text-[11px] font-semibold uppercase tracking-wider block ${isLightTheme ? 'text-zinc-800 font-bold' : 'text-zinc-400'}`}>
+                          {t('regionalSettings', 'Automatische Regionaleinstellungen')}
                         </span>
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div className={`p-2.5 rounded-2xl border ${
+                            isLightTheme ? 'bg-white border-black/10 text-zinc-950 shadow-sm' : 'bg-black/30 border-white/5 text-white'
+                          }`}>
+                            <span className={`text-[10px] block ${isLightTheme ? 'text-zinc-600 font-medium' : 'text-zinc-400'}`}>
+                              {t('currency', 'Währung')}
+                            </span>
+                            <span className="font-bold">{selectedCountry.currency}</span>
+                          </div>
+                          <div className={`p-2.5 rounded-2xl border ${
+                            isLightTheme ? 'bg-white border-black/10 text-zinc-950 shadow-sm' : 'bg-black/30 border-white/5 text-white'
+                          }`}>
+                            <span className={`text-[10px] block ${isLightTheme ? 'text-zinc-600 font-medium' : 'text-zinc-400'}`}>
+                              {t('units', 'Maßeinheiten')}
+                            </span>
+                            <span className="font-bold">
+                              {selectedCountry.units === 'metric' ? 'Metrisch (km, °C)' : 'Imperial (mi, °F)'}
+                            </span>
+                          </div>
+                          <div className={`p-2.5 rounded-2xl border ${
+                            isLightTheme ? 'bg-white border-black/10 text-zinc-950 shadow-sm' : 'bg-black/30 border-white/5 text-white'
+                          }`}>
+                            <span className={`text-[10px] block ${isLightTheme ? 'text-zinc-600 font-medium' : 'text-zinc-400'}`}>
+                              {t('dateFormat', 'Datumsformat')}
+                            </span>
+                            <span className="font-bold">{selectedCountry.dateFormat}</span>
+                          </div>
+                          <div className={`p-2.5 rounded-2xl border ${
+                            isLightTheme ? 'bg-white border-black/10 text-zinc-950 shadow-sm' : 'bg-black/30 border-white/5 text-white'
+                          }`}>
+                            <span className={`text-[10px] block ${isLightTheme ? 'text-zinc-600 font-medium' : 'text-zinc-400'}`}>
+                              {t('keyboardLayout', 'Tastaturlayout')}
+                            </span>
+                            <span className={`font-bold ${isLightTheme ? 'text-purple-700' : 'text-purple-300'}`}>
+                              {keyboardLayout === 'de' ? 'QWERTZ (DE)' : keyboardLayout === 'ch' ? 'QWERTZ (CH)' : 'QWERTY (US)'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* API Translation status chip */}
+                      <div className={`p-2.5 rounded-2xl border flex items-center justify-between text-[11px] ${
+                        isLightTheme ? 'bg-purple-50 border-purple-200 text-purple-950' : 'bg-purple-950/30 border-purple-500/20 text-purple-200'
+                      }`}>
+                        <div className="flex items-center gap-1.5">
+                          <Globe className="w-3.5 h-3.5 text-purple-500" />
+                          <span className="font-medium">Sprache: {selectedCountry.lang.toUpperCase()}</span>
+                        </div>
+                        {isTranslating ? (
+                          <span className="flex items-center gap-1 text-[10px] font-medium text-purple-600">
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            Übersetze via API...
+                          </span>
+                        ) : selectedCountry.lang !== 'de' ? (
+                          <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            ✓ Übersetzt via API
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-zinc-500">Deutsch (Original)</span>
+                        )}
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          )}
+              )}
 
           {/* Step 2: Barrierefreiheit (Eingabe- und Sehhilfen) */}
           {currentStep === 2 && (
@@ -1596,14 +1780,14 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
             type="button"
             disabled={currentStep === 1}
             onClick={handleBack}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold disabled:opacity-30 disabled:pointer-events-none transition-all ${
+            className={`flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-semibold disabled:opacity-30 disabled:pointer-events-none transition-all ${
               isLightTheme
-                ? 'text-zinc-700 hover:text-zinc-950 hover:bg-black/10'
+                ? 'text-zinc-800 hover:text-zinc-950 hover:bg-black/10 border border-black/10'
                 : 'text-zinc-300 hover:text-white hover:bg-white/10'
             }`}
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Zurück</span>
+            <span>{t('btnBack', 'Zurück')}</span>
           </button>
 
           {/* Dots Indicator */}
@@ -1623,13 +1807,13 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
             <button
               type="button"
               onClick={handleNext}
-              className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-semibold text-white shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
+              className="flex items-center gap-2 px-7 py-2.5 rounded-full text-xs font-bold text-white shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98]"
               style={{
                 backgroundColor: accentConfig.primary,
                 boxShadow: `0 8px 20px ${accentConfig.glow}`,
               }}
             >
-              <span>Fortfahren</span>
+              <span>{t('btnContinue', 'Fortfahren')}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           ) : (
@@ -1637,7 +1821,7 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
               type="button"
               disabled={isFinalizing}
               onClick={handleLaunchOS}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold text-white shadow-xl transition-all hover:scale-[1.03] active:scale-[0.98] disabled:opacity-50"
+              className="flex items-center gap-2 px-8 py-3 rounded-full text-xs font-bold text-white shadow-xl transition-all hover:scale-[1.03] active:scale-[0.98] disabled:opacity-50"
               style={{
                 backgroundColor: ACCENT_COLORS[selectedAccent]?.primary || '#9333ea',
                 boxShadow: `0 8px 25px ${ACCENT_COLORS[selectedAccent]?.glow || 'rgba(147,51,234,0.6)'}`,
@@ -1646,12 +1830,12 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
               {isFinalizing ? (
                 <>
                   <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Richte Desktop ein...</span>
+                  <span>{t('settingUpDesktop', 'Richte Desktop ein...')}</span>
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  <span>ObsidianOS starten</span>
+                  <span>{t('btnStartOS', 'ObsidianOS starten')}</span>
                 </>
               )}
             </button>
@@ -1794,6 +1978,8 @@ export const SetupAssistant: React.FC<SetupAssistantProps> = ({ onComplete }) =>
         }}
         accentColor={accentConfig.primary}
       />
-    </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 };

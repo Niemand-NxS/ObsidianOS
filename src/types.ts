@@ -321,6 +321,8 @@ export interface PersonalizationSettings {
   gpuAcceleration: boolean;
   simulatedNetworkOffline?: boolean;
   autostartApps?: string[];
+  customAppIcons?: Record<string, string>;
+  systemLanguage?: 'de' | 'en' | 'fr' | 'es' | 'it' | 'ja' | 'zh';
 }
 
 export type SnapTarget =

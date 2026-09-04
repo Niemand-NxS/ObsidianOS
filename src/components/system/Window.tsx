@@ -25,6 +25,7 @@ import { AudioSynthApp } from '../apps/AudioSynthApp';
 import { CustomAIApp } from '../apps/CustomAIApp';
 import { YouTubeApp } from '../apps/YouTubeApp';
 import { ChessApp } from '../apps/ChessApp';
+import { AppIcon } from '../common/AppIcon';
 import {
   X,
   Minus,
@@ -482,7 +483,7 @@ export const Window: React.FC<{ window?: WindowState; win?: WindowState }> = (pr
     }
   };
 
-  const IconComponent = APP_ICONS[win.iconName] || Settings;
+  const effectiveIconName = (win.appId && settings.customAppIcons?.[win.appId]) || win.iconName;
 
   return (
     <motion.div
@@ -646,7 +647,7 @@ export const Window: React.FC<{ window?: WindowState; win?: WindowState }> = (pr
 
             {/* Title & Icon */}
             <div className="flex items-center gap-2 text-xs font-medium truncate px-2">
-              <IconComponent className="w-3.5 h-3.5 shrink-0" style={{ color: accentConfig.text }} />
+              <AppIcon name={effectiveIconName} className="w-3.5 h-3.5 shrink-0" style={{ color: accentConfig.text }} />
               <span className="truncate">{win.title}</span>
             </div>
 
@@ -680,7 +681,7 @@ export const Window: React.FC<{ window?: WindowState; win?: WindowState }> = (pr
             {/* Left side: Icon, Title & Quick Tiling */}
             <div className="flex items-center gap-3 truncate">
               <div className="flex items-center gap-2 text-xs font-medium truncate">
-                <IconComponent className="w-3.5 h-3.5 shrink-0" style={{ color: accentConfig.text }} />
+                <AppIcon name={effectiveIconName} className="w-3.5 h-3.5 shrink-0" style={{ color: accentConfig.text }} />
                 <span className={`truncate font-medium ${effectiveTheme === 'light' ? 'text-slate-800 font-semibold' : 'text-zinc-200'}`}>
                   {win.title}
                 </span>

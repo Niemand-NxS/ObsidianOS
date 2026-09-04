@@ -453,20 +453,24 @@ async function startServer() {
         // If some strings were missing from dictionary and Gemini is available, call Gemini API
         const ai = getGeminiClient();
         if (!allFound && ai && process.env.GEMINI_API_KEY) {
-          try {
-            const prompt = `You are an OS localization translation engine. Translate the following JSON key-value pairs from ${sourceLang} to language code '${langCode}'. Keep keys identical and return ONLY valid JSON: ${JSON.stringify(texts)}`;
-            const response = await ai.models.generateContent({
-              model: "gemini-2.5-flash",
-              contents: prompt,
-            });
-            const textOut = response.text || "";
-            const jsonMatch = textOut.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              translated = { ...translated, ...parsed };
+          const prompt = `You are an OS localization translation engine. Translate the following JSON key-value pairs from ${sourceLang} to language code '${langCode}'. Keep keys identical and return ONLY valid JSON: ${JSON.stringify(texts)}`;
+          const candidateModels = ["gemini-3.6-flash", "gemini-3.8-flash", "gemini-flash-latest"];
+          for (const model of candidateModels) {
+            try {
+              const response = await ai.models.generateContent({
+                model,
+                contents: prompt,
+              });
+              const textOut = response.text || "";
+              const jsonMatch = textOut.match(/\{[\s\S]*\}/);
+              if (jsonMatch) {
+                const parsed = JSON.parse(jsonMatch[0]);
+                translated = { ...translated, ...parsed };
+                break;
+              }
+            } catch (aiErr) {
+              console.warn(`Gemini (${model}) translate failed, trying next model:`, aiErr);
             }
-          } catch (aiErr) {
-            console.warn("Gemini translate fallback failed, using dictionary:", aiErr);
           }
         }
 

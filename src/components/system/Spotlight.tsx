@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useOS } from '../../context/OSContext';
 import { SpotlightItem, AppId } from '../../types';
 import { APPS_REGISTRY, ACCENT_COLORS } from '../../config/themeConfig';
+import { AppIcon } from '../common/AppIcon';
 import {
   Search,
   Folder,
@@ -270,24 +271,6 @@ export const Spotlight: React.FC = () => {
 
   const getIcon = (iconName: string) => {
     switch (iconName) {
-      case 'Settings':
-        return <Settings className="w-4 h-4 text-purple-400" />;
-      case 'Folder':
-        return <Folder className="w-4 h-4 text-purple-400" />;
-      case 'Calculator':
-        return <Calculator className="w-4 h-4 text-purple-400" />;
-      case 'Globe':
-        return <Globe className="w-4 h-4 text-purple-400" />;
-      case 'Terminal':
-        return <Terminal className="w-4 h-4 text-purple-400" />;
-      case 'Palette':
-        return <Palette className="w-4 h-4 text-purple-400" />;
-      case 'Sparkles':
-        return <Sparkles className="w-4 h-4 text-purple-400" />;
-      case 'Users':
-        return <Users className="w-4 h-4 text-purple-400" />;
-      case 'Shield':
-        return <Shield className="w-4 h-4 text-purple-400" />;
       case 'Lock':
         return <Lock className="w-4 h-4 text-amber-400" />;
       case 'LogOut':
@@ -296,16 +279,8 @@ export const Spotlight: React.FC = () => {
         return <Trash2 className="w-4 h-4 text-red-400" />;
       case 'RefreshCw':
         return <RefreshCw className="w-4 h-4 text-emerald-400" />;
-      case 'Gamepad2':
-        return <Gamepad2 className="w-4 h-4 text-purple-400" />;
-      case 'Grid3X3':
-        return <Grid3X3 className="w-4 h-4 text-purple-400" />;
-      case 'Youtube':
-        return <Youtube className="w-4 h-4 text-red-500" />;
-      case 'Crown':
-        return <Crown className="w-4 h-4 text-amber-400" />;
       default:
-        return <FileText className="w-4 h-4 text-zinc-400" />;
+        return <AppIcon name={iconName} className="w-4 h-4 text-purple-400" />;
     }
   };
 

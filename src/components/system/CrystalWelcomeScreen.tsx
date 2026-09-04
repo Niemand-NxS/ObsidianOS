@@ -122,10 +122,10 @@ export const CrystalWelcomeScreen: React.FC<CrystalWelcomeScreenProps> = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: isTriggering ? 0 : 1, scale: isTriggering ? 1.04 : 1 }}
-      exit={{ opacity: 0, scale: 1.05 }}
-      transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+      initial={{ opacity: 0, filter: 'blur(10px)' }}
+      animate={{ opacity: isTriggering ? 0 : 1, scale: isTriggering ? 1.04 : 1, filter: isTriggering ? 'blur(12px)' : 'blur(0px)' }}
+      exit={{ opacity: 0, scale: 1.05, filter: 'blur(14px)' }}
+      transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
       onClick={handleTrigger}
       className="fixed inset-0 z-[100] flex flex-col items-center justify-between py-12 px-6 cursor-pointer select-none overflow-hidden text-white"
     >
